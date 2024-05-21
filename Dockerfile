@@ -44,4 +44,4 @@ COPY ./data ./data
 COPY ./media ./media
 
 # start API server
-CMD sleep infinity
+CMD cargo run
