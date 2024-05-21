@@ -1,0 +1,26 @@
+[package]
+name = "enso-ml"
+version = "0.1.1"
+edition = "2021"
+authors = ["Sadovnikov Anton <sadovnikoff@gmail.com>"]
+
+description = "Stable diffusion pipeline service"
+repository = "https://github.com/siddthartha/enso-ml"
+keywords = ["candle", "deep-learning", "machine-learning", "diffusion", "transformers"]
+categories = ["science"]
+license = "GPLv3"
+readme = "README.md"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+candle-core = { git = "https://github.com/huggingface/candle.git", version = "0.5.1", features = ["cuda"] }
+
+
+[profile.release]
+opt-level = 'z'     # Optimize for size.
+#lto = true          # Enable Link Time Optimization
+codegen-units = 1   # Reduce number of codegen units to increase optimizations.
+panic = 'abort'     # Abort on panic
+strip = true        # Strip symbols from binary*
