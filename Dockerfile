@@ -35,8 +35,8 @@ ENV PATH=/enso-ml:${PATH}
 # CAN NOT be built on system without real GPU installed!
 # so we build before run on cloud side! :/
 
-#RUN \
-#    cargo build
+RUN \
+    cargo build
 
 # cleanup resources needed for rebuild only
 #RUN cargo clean \

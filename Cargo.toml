@@ -8,15 +8,44 @@ description = "Stable diffusion pipeline service"
 repository = "https://github.com/siddthartha/enso-ml"
 keywords = ["candle", "deep-learning", "machine-learning", "diffusion", "transformers"]
 categories = ["science"]
-license = "GPLv3"
+license = "MIT"
 readme = "README.md"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-candle-core = { git = "https://github.com/huggingface/candle.git", version = "0.5.1", features = ["cuda"] }
+clap = { version = "4.0.19", features = ["derive"] }
+rust-ini = "0.18.0"
+colored = "2.0.0"
+image = "0.23"
+sha2 = "0.8"
+hex = "0.4"
+anyhow = "1.0"
+regex = "1.8.1"
+uuid = "1.3.3"
+base64 = "0.21.0"
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.96"
+tokio = { version = "1.37.0", features = ["full"] }
+chrono = { version = "0.4.38", features = ["serde"] }
+pretty_env_logger = "0.5.0"
+warp = "0.3.7"
+redis = { version = "0.22.2", features = ["tokio-comp"] }
 
+candle-core = { git = "https://github.com/huggingface/candle.git", version = "0.5.1" }
+
+[lib]
+crate-type = ["lib"]
+bench = false
+
+#[[bin]]
+#name = "sd-cli"
+#path = "./src/bin/ml-cli.rs"
+
+#[[bin]]
+#name = "sd-worker"
+#path = "./src/bin/ml-worker.rs"
 
 [profile.release]
 opt-level = 'z'     # Optimize for size.
