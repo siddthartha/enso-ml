@@ -1,0 +1,33 @@
+version: "3.3"
+
+services:
+
+  enso-ml:
+    image: dogen/enso-ml:latest
+    env_file:
+      - ./.env
+    ports:
+      - "80:80"
+    command: >
+      bash -c "true \
+      && (./ml-worker & ./enso-ml)
+      "
+    volumes:
+      - ./data:/enso-ml/data
+      - ./media:/enso-ml/media
+      - ./src:/enso-ml/src
+      - ./Cargo.toml:/enso-ml/Cargo.toml
+    depends_on:
+      - redis
+    networks:
+      - default
+  redis:
+    image: redis:latest
+    container_name: redis
+    hostname: redis
+    restart: always
+    expose:
+      - "6379"
+
+networks:
+  default:
