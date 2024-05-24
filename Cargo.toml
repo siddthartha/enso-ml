@@ -40,12 +40,12 @@ crate-type = ["lib"]
 bench = false
 
 #[[bin]]
-#name = "sd-cli"
+#name = "ml-cli"
 #path = "./src/bin/ml-cli.rs"
 
-#[[bin]]
-#name = "sd-worker"
-#path = "./src/bin/ml-worker.rs"
+[[bin]]
+name = "ml-worker"
+path = "./src/bin/ml-worker.rs"
 
 [profile.release]
 opt-level = 'z'     # Optimize for size.
