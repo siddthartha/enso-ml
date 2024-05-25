@@ -37,13 +37,11 @@ pub async fn main() -> anyhow::Result<()>
 
         let task = StableDiffusionTask {
             prompt: prompt.clone(),
-            cpu: vec![],
-            height: Some(height as i64),
-            width: Some(width as i64),
+            height: Some(height as usize),
+            width: Some(width as usize),
             unet_weights: None,
             clip_weights: None,
             vae_weights: None,
-            vocab_file: "data/vocab_16e6.txt".to_string(),
             sliced_attention_size: None,
             n_steps: steps as usize,
             seed: seed.clone(),
