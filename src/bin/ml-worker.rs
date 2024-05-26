@@ -6,7 +6,6 @@ use enso_ml::{RENDER_QUEUE, TASK_PREFIX, StableDiffusionTask, StableDiffusionVer
 #[tokio::main]
 pub async fn main() -> anyhow::Result<()>
 {
-
     let client = Client::open(enso_ml::redis_host()).unwrap();
     let mut connection = client.get_connection()?;
     let mut write_connection = client.get_connection()?;
@@ -50,7 +49,10 @@ pub async fn main() -> anyhow::Result<()>
             autocast: false,
             sd_version: match version {
                 1 => StableDiffusionVersion::V1_5,
-                _ => StableDiffusionVersion::V2_1,
+                2 => StableDiffusionVersion::V2_1,
+                3 => StableDiffusionVersion::Xl,
+                4 => StableDiffusionVersion::Turbo,
+                _ => StableDiffusionVersion::V1_5,
             },
             intermediary_images,
         };
@@ -60,5 +62,8 @@ pub async fn main() -> anyhow::Result<()>
             serde_json::to_string(&task).unwrap()
         ).unwrap();
 
+        let image = task.run(seed.clone())?;
+
+        ()
     }
 }

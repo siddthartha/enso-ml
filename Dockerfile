@@ -25,13 +25,9 @@ COPY ./src ./src
 
 ENV PATH=/enso-ml:${PATH}
 
-# CAN NOT be built on system without real GPU installed!
-# so we build before run on cloud side! :/
-
 RUN \
-    cargo build --release \
-    && cp /enso-ml/target/release/enso-ml ./enso-ml \
-    && cp /enso-ml/target/release/ml-worker ./ml-worker
+    ln -s -r ./target/release/enso-ml ./enso-ml \
+    && ln -s -r ./target/release/ml-worker ./ml-worker
 
 # cleanup resources needed for rebuild only
 #RUN cargo clean \
@@ -42,5 +38,5 @@ COPY ./data ./data
 COPY ./media ./media
 
 # start API server
-CMD (./ml-worker & ./enso-darknet)
+CMD (cargo build --release) && (./ml-worker & ./enso-ml)
 

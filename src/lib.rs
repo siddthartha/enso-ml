@@ -6,15 +6,16 @@ extern crate intel_mkl_src;
 
 use std::arch::x86_64::_rdrand64_step;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use image::GenericImageView;
-
-use candle_transformers::models::stable_diffusion;
-
 use anyhow::{Error as E, Result};
-use candle_core::{DType, Device, IndexOp, Module, Tensor, D};
-use stable_diffusion::vae::AutoEncoderKL;
+use uuid::Uuid;
+
+use hf_hub::Cache;
 use tokenizers::Tokenizer;
+use candle_core::{DType, Device, IndexOp, Module, Tensor, D};
+use candle_core::utils::cuda_is_available;
+use candle_transformers::models::stable_diffusion;
+use stable_diffusion::vae::AutoEncoderKL;
+use image::GenericImageView;
 
 pub mod models;
 
@@ -115,7 +116,7 @@ impl StableDiffusionTask {
         }
     }
 
-    pub fn run(&self, seed: i64) -> Result<Tensor, anyhow::Error>
+    pub fn run(&self, _seed: i64) -> Result<Tensor, anyhow::Error>
     {
 
         let StableDiffusionTask {
@@ -129,11 +130,10 @@ impl StableDiffusionTask {
             clip_weights,
             vae_weights,
             unet_weights,
-            // seed,
             ..
         } = self.clone();
 
-        let cpu = true;
+        let cpu = false;
         let num_samples = 1;
         let uncond_prompt = "";
         let tokenizer = None;
@@ -159,15 +159,7 @@ impl StableDiffusionTask {
                 StableDiffusionVersion::Turbo => 0.,
             },
         };
-        // let n_steps = match n_steps {
-        //     Some(n_steps) => n_steps,
-        //     None => match sd_version {
-        //         StableDiffusionVersion::V1_5
-        //         | StableDiffusionVersion::V2_1
-        //         | StableDiffusionVersion::Xl => 30,
-        //         StableDiffusionVersion::Turbo => 1,
-        //     },
-        // };
+
         let dtype = if use_f16 { DType::F16 } else { DType::F32 };
         let sd_config = match sd_version {
             StableDiffusionVersion::V1_5 => {
@@ -189,7 +181,10 @@ impl StableDiffusionTask {
         let scheduler = sd_config.build_scheduler(n_steps)?;
         let device = candle_examples::device(cpu)?;
 
-        device.set_seed(seed as u64)?;
+        if cuda_is_available()
+        {
+            device.set_seed(seed as u64)?;
+        }
 
         let use_guide_scale = guidance_scale > 1.0;
 
@@ -286,7 +281,9 @@ impl StableDiffusionTask {
                     latents.clone()
                 };
 
+                println!("scheduler.scale_model_input");
                 let latent_model_input = scheduler.scale_model_input(latent_model_input, timestep)?;
+                println!("unet.forward");
                 let noise_pred =
                     unet.forward(&latent_model_input, timestep as f64, &text_embeddings)?;
 
@@ -299,6 +296,7 @@ impl StableDiffusionTask {
                     noise_pred
                 };
 
+                println!("scheduler.step");
                 latents = scheduler.step(&noise_pred, timestep, &latents)?;
                 let dt = start_time.elapsed().as_secs_f32();
                 println!("step {}/{n_steps} done, {:.2}s", timestep_index + 1, dt);
@@ -449,7 +447,13 @@ impl ModelFile {
                         }
                     }
                 };
+
+                // let cache = Cache::new("./data".into());
+                // let cache = cache.repo(hf_hub::Repo::new(repo.to_string(), hf_hub::RepoType::Model));
+                // let filename = cache.get(path).unwrap();
+
                 let filename = Api::new()?.model(repo.to_string()).get(path)?;
+
                 Ok(filename)
             }
         }
