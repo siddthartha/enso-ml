@@ -116,7 +116,7 @@ impl StableDiffusionTask {
         }
     }
 
-    pub fn run(&self, _seed: i64) -> Result<Tensor, anyhow::Error>
+    pub fn run(&self, seed: i64) -> Result<Tensor, anyhow::Error>
     {
 
         let StableDiffusionTask {

@@ -34,9 +34,9 @@ warp = "0.3.7"
 redis = { version = "0.22.2", features = ["tokio-comp"] }
 
 candle-core = { git = "https://github.com/huggingface/candle.git", version = "0.5.1", features = ["cuda"] }
-candle-examples = { git = "https://github.com/huggingface/candle.git", version = "0.5.1" }
+candle-nn = { git = "https://github.com/huggingface/candle.git", version = "0.5.1", features = ["cuda"] }
 candle-transformers = { git = "https://github.com/huggingface/candle.git", version = "0.5.1" }
-candle-nn = { git = "https://github.com/huggingface/candle.git", version = "0.5.1" }
+candle-examples = { git = "https://github.com/huggingface/candle.git", version = "0.5.1" }
 hf-hub = "0.3.2"
 tokenizers = "0.19.1"
 
