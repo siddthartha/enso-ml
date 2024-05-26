@@ -1,0 +1,207 @@
+<html lang="en">
+<head>
+    <title>Stable Diffusion 2.1 on Rust</title>
+    <meta name="color-scheme" content="light dark" />
+    <link rel="stylesheet" href="https://markdowncss.github.io/retro/css/retro.css" type="text/css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flexboxgrid/6.3.1/flexboxgrid.min.css" type="text/css" />
+    <style>
+
+        body {
+            margin: 1rem 0 1rem 0;
+            padding: 18px;
+            max-width: 100%;
+        }
+
+        input {
+            width: 3em;
+        }
+        textarea {
+            width:100%;
+            height: 5em;
+        }
+
+        button {
+            cursor: pointer;
+            padding: 0.5em 1em;
+            margin: 0.3em 0;
+        }
+        code {
+            padding: .2em .4em;
+            margin: 0;
+            font-size: 85%;
+            background-color: #333;
+            border-radius: 5px;
+        }
+    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body>
+<div class="row around-xs">
+    <div class="col-xs-3">
+        <blockquote style="margin-top: 0;">
+            GPU RunPod<br />
+            Stable Diffusion <label>version</label><select id="version" style="width:5em;"><option value="1" selected="selected">1.5</option><option value="2">2.1</option></select><br />
+            CUDA 11.8<br />
+            libtorch 2.1.0
+        </blockquote>
+    </div>
+    <div class="col-xs-3">
+        <label for="prompt">Prompt:</label>
+        <textarea id="prompt">beauty</textarea><br />
+    </div>
+    <div class="col-xs-3">
+        <label for="steps">Time steps:</label>
+        <input id="steps" value="24" /><br />
+        <label for="width">Width:</label>
+        <input id="width" value="768" /><br />
+        <label for="height">Height:</label>
+        <input id="height" value="768" /><br />
+        <label for="seed">Seed:</label>
+        <input id="seed" value="" style="width:100%;"/><br /><br />
+
+    </div>
+    <div class="col-xs-3">
+        <button id="runButton" onclick="generate()">Run task</button>
+    </div>
+</div>
+<div class="row around-xs">
+    <div class="col-xs-12">
+        <blockquote id="status" style="margin-top: 0;"></blockquote>
+    </div>
+</div>
+<div class="row around-xs">
+    <div class="col-xs-6">
+        <img id="result" alt="result"  src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs%3D" />
+    </div>
+</div>
+<!--<div class="row around-xs">-->
+<!--    <div class="col-xs-10">-->
+<!--        <div class="markdown-body box">-->
+<!--            <h4>Donate my work (USDT / TRC20)</h4>-->
+<!--            <img alt="USDT/TRC20" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAACWAQMAAAAGz+OhAAAABlBMVEX///8AAABVwtN+AAABL0lEQVR42uzUMYoDMQwFUIEKX0rga6kIyDCFr2XQpVwI/qLZzO6mjWa7KG7yGnukj+hT/1EGbCUlxupAlE3zqFL3ECKpm21tux3wkB73mA216Os+m4iOm4xItU04Xvvyrp0zUn2IyOvc3rTzHqUH//lfMc0u5JszQkvKZthkg4jhHj3KRqo2d8sJ+XVHxdoc1OYcHXBfVDZtADAPd1/8xIo1jAxRCK8eHGWjtlXb4GzCT19utgzBIDUPBp59qZjmlxiC3f3CkrWdykHswXWjNrfNjLz0RVK3fDRwZAzgUTbDzN+xOPO1yva9K2cICQnX7dxrdmZI+pKy6TkmtdyR1x0ls61qCOHfrVu1BoyeuuQWI7IjSDKVdctjm+FYd9g5o9wRIRx9le1ThfoKAAD//yQvhLTrCA8oAAAAAElFTkSuQmCC" />-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</div>-->
+
+<script><!--
+    let prompt = document.getElementById('prompt');
+    let result = document.getElementById('result');
+    let runButton = document.getElementById('runButton');
+    let statusPre = document.getElementById('status');
+
+    function sleep(milliseconds)
+    {
+        const date = Date.now();
+        let currentDate = null;
+
+        do {
+            currentDate = Date.now();
+        }
+        while (currentDate - date < milliseconds);
+    }
+
+    function makeRequest(url, requestType = "GET")
+    {
+        let xhr = new XMLHttpRequest();
+        xhr.open(requestType, url, false);
+        xhr.send();
+
+        return xhr;
+    }
+
+    function makeApiRequest(url, requestType = "GET")
+    {
+        return JSON.parse(
+            makeRequest(url, requestType)
+                .responseText
+        );
+    }
+
+    function pullAndWait(uuid, timestep, count)
+    {
+        let steps = parseInt(document.getElementById('steps').value);
+
+        if (timestep > steps)
+        {
+            return;
+        }
+
+        if (makeRequest(resultUrl(uuid, timestep), "HEAD").status === 200
+            || count > 10
+        ) {
+            if (timestep === steps)
+            {
+                result.setAttribute('src', resultUrl(uuid, timestep));
+                runButton.removeAttribute('disabled');
+
+                return;
+            }
+
+            result.setAttribute('src', resultUrl(uuid, timestep));
+            result.style.display = 'block';
+
+            setTimeout(function() {
+                pullAndWait(uuid, timestep + 1, 0);
+            }, 1500);
+
+            return;
+        }
+
+        setTimeout(function() {
+            pullAndWait(uuid, timestep, count + 1);
+        }, 2000);
+    }
+
+    function resultUrl(uuid, timestep = 0)
+    {
+        if (timestep > 0) {
+            return '/result/' + uuid + '-' + timestep + '.jpg';
+        } else {
+            return '/result/' + uuid + '.jpg';
+        }
+    }
+
+    function generate()
+    {
+        let width = parseInt(document.getElementById('width').value);
+        let height = parseInt(document.getElementById('height').value);
+        let steps = parseInt(document.getElementById('steps').value);
+        let seed = document.getElementById('seed').value;
+        let version = parseInt(document.getElementById('version').value);
+
+        runButton.setAttribute('disabled', 'disabled');
+
+        result.setAttribute('src', '/gui/spinner-white.svg');
+
+        let requestUrl = '/api/render?' + new URLSearchParams([
+            ['prompt', encodeURI(prompt.value)],
+            ['steps', steps],
+            ['width', width],
+            ['height', height],
+            ['version', version],
+            ...((seed !== '') ? [['seed', seed]] : [])
+        ]).toString();
+
+        let renderResponse = makeRequest(requestUrl);
+
+        if (renderResponse.status !== 200)
+        {
+            console.log(renderResponse.status + ': ' + renderResponse.statusText );
+
+            return;
+        }
+
+        console.log(renderResponse.responseText);
+
+        const response = JSON.parse(renderResponse.responseText);
+
+        statusPre.innerText = renderResponse.responseText;
+
+        setTimeout(function() {
+            pullAndWait(response.uuid, 1, 0);
+        }, 4000);
+    }
+
+--></script>
+</body>
+</html>

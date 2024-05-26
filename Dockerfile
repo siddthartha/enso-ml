@@ -36,6 +36,7 @@ RUN \
 
 COPY ./data ./data
 COPY ./media ./media
+COPY ./gui ./gui
 
 # start API server
 CMD (cargo build --release) && (./ml-worker & ./enso-ml)
