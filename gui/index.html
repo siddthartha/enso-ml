@@ -4,7 +4,7 @@
     <meta name="color-scheme" content="light dark" />
     <link rel="stylesheet" href="https://markdowncss.github.io/retro/css/retro.css" type="text/css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flexboxgrid/6.3.1/flexboxgrid.min.css" type="text/css" />
-    <style>
+    <style><!--
 
         body {
             margin: 1rem 0 1rem 0;
@@ -32,15 +32,17 @@
             background-color: #333;
             border-radius: 5px;
         }
-    </style>
+    --></style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
 <body>
 <div class="row around-xs">
     <div class="col-xs-3">
+        <img id="progress" src="/gui/spinner-white.svg" alt="progress" style="position:absolute; display: none;" />
+        <span id="progressStep" style="position:absolute; top: 2em; display:none;"></span>
         <blockquote style="margin-top: 0;">
             GPU RunPod<br />
-            Stable Diffusion <label>version</label>&nbsp;<select id="version" style="width:5em;"><option value="1">1.5</option><option value="2">2.1</option><option value="3" selected="selected">XL</option><option value="4">XL Turbo</option></select><br />
+            Stable Diffusion <label for="version">version</label>&nbsp;<select id="version" style="width:5em;"><option value="1">1.5</option><option value="2">2.1</option><option value="3" selected="selected">XL</option><option value="4">XL Turbo</option></select><br />
             CUDA 11.8<br />
             Candle 0.5.1
         </blockquote>
@@ -86,6 +88,8 @@
 <script><!--
     let prompt = document.getElementById('prompt');
     let result = document.getElementById('result');
+    let progressSpinner = document.getElementById('progress')
+    let progress = document.getElementById('progressStep')
     let runButton = document.getElementById('runButton');
     let statusPre = document.getElementById('status');
 
@@ -120,19 +124,30 @@
     function pullAndWait(uuid, timestep, count)
     {
         let steps = parseInt(document.getElementById('steps').value);
+        progress.innerText = timestep + '/' + steps;
 
         if (timestep > steps)
         {
             return;
         }
 
-        if (makeRequest(resultUrl(uuid, timestep), "HEAD").status === 200
-            || count > 10
-        ) {
+        if (timestep > 10)
+        {
+            setTimeout(function() {
+                pullAndWait(uuid, timestep, count + 1);
+            }, 2000);
+
+            return;
+        }
+
+        if (makeRequest(resultUrl(uuid, timestep), "HEAD").status === 200)
+        {
             if (timestep === steps)
             {
                 result.setAttribute('src', resultUrl(uuid, timestep));
                 runButton.removeAttribute('disabled');
+                progressSpinner.style.display = 'none';
+                progress.style.display = 'none';
 
                 return;
             }
@@ -142,7 +157,7 @@
 
             setTimeout(function() {
                 pullAndWait(uuid, timestep + 1, 0);
-            }, 1500);
+            }, 1000);
 
             return;
         }
@@ -172,6 +187,8 @@
         runButton.setAttribute('disabled', 'disabled');
 
         result.setAttribute('src', '/gui/spinner-white.svg');
+        progressSpinner.style.display = 'block';
+        progress.style.display = 'block';
 
         let requestUrl = '/api/render?' + new URLSearchParams([
             ['prompt', encodeURI(prompt.value)],

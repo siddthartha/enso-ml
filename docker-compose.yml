@@ -4,6 +4,8 @@ services:
 
   enso-ml:
     image: dogen/enso-ml:latest
+    environment:
+      - HF_HOME=/enso-ml/data
     env_file:
       - ./.env
     ports:

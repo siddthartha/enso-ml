@@ -62,7 +62,7 @@ pub async fn main() -> anyhow::Result<()>
             serde_json::to_string(&task).unwrap()
         ).unwrap();
 
-        let image = task.run(seed.clone())?;
+        let _image = task.run(seed.clone())?;
 
         ()
     }

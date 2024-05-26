@@ -21,10 +21,10 @@ A PoC of simple asynchronuous json API for running ML-models tasks via Redis que
 
 ### Usage in docker
 
-* `docker pull dogen/enso-ml:latest`
-* `docker-compose up -d`
+* Clone this repository
+* Run `docker-compose up --build -d` in root folder
 * Run API and server worker with Redis job queue:
-  * `wget http://localhost:80/api/render/?prompt=Some%20prompt`
+  * `curl http://localhost:80/api/render/?prompt=Some%20prompt`
 
 ### TODO:
 

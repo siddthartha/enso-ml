@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use anyhow::{Error as E, Result};
 use uuid::Uuid;
 
-use hf_hub::Cache;
 use tokenizers::Tokenizer;
 use candle_core::{DType, Device, IndexOp, Module, Tensor, D};
 use candle_core::utils::cuda_is_available;
