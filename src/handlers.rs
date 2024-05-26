@@ -1,5 +1,6 @@
 use std::arch::x86_64::_rdrand64_step;
 use std::collections::HashMap;
+use candle_core::utils::cuda_is_available;
 use redis::AsyncCommands;
 use warp::{reject, Rejection, Reply};
 use warp::reply::{json};
@@ -16,7 +17,7 @@ pub async fn health_checker_handler() -> WebResult<impl Reply>
     let response = &HealthcheckResponse {
         status: false,
         uuid: uuid.clone(),
-        // has_cuda: ,
+        has_cuda: cuda_is_available(),
         // cuda_devices_count: tch::Cuda::device_count() as i32,
         // has_cudann: tch::Cuda::cudnn_is_available(),
         // has_mps: tch::utils::has_mps(),

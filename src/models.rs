@@ -16,7 +16,7 @@ pub struct SDRequest {
 pub struct HealthcheckResponse {
     pub status: bool,
     pub uuid: String,
-    // pub has_cuda: bool,
+    pub has_cuda: bool,
     // pub cuda_devices_count: i32,
     // pub has_cudann: bool,
     // pub has_mps: bool,
