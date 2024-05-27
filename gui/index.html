@@ -11,7 +11,6 @@
             padding: 18px;
             max-width: 100%;
         }
-
         input {
             width: 3em;
         }
@@ -19,7 +18,6 @@
             width:100%;
             height: 5em;
         }
-
         button {
             cursor: pointer;
             padding: 0.5em 1em;
@@ -39,7 +37,7 @@
 <div class="row around-xs">
     <div class="col-xs-3">
         <img id="progress" src="/gui/spinner-white.svg" alt="progress" style="position:absolute; display: none;" />
-        <span id="progressStep" style="position:absolute; top: 2em; display:none;"></span>
+        <span id="progressStep" style="position:absolute; top: 5em; font-size: 9pt; display:none;"></span>
         <blockquote style="margin-top: 0;">
             GPU RunPod<br />
             Stable Diffusion <label for="version">version</label>&nbsp;<select id="version" style="width:5em;"><option value="1">1.5</option><option value="2">2.1</option><option value="3" selected="selected">XL</option><option value="4">XL Turbo</option></select><br />
@@ -92,6 +90,7 @@
     let progress = document.getElementById('progressStep')
     let runButton = document.getElementById('runButton');
     let statusPre = document.getElementById('status');
+    let steps = parseInt(document.getElementById('steps').value);
 
     function sleep(milliseconds)
     {
@@ -123,7 +122,6 @@
 
     function pullAndWait(uuid, timestep, count)
     {
-        let steps = parseInt(document.getElementById('steps').value);
         progress.innerText = timestep + '/' + steps;
 
         if (timestep > steps)
@@ -131,10 +129,15 @@
             return;
         }
 
-        if (timestep > 10)
+        if (count > 10)
         {
+            if (timestep === steps)
+            {
+                return; //
+            }
+
             setTimeout(function() {
-                pullAndWait(uuid, timestep, count + 1);
+                pullAndWait(uuid, timestep + 1, 0);
             }, 2000);
 
             return;
@@ -178,17 +181,18 @@
 
     function generate()
     {
+        steps = parseInt(document.getElementById('steps').value);
+
         let width = parseInt(document.getElementById('width').value);
         let height = parseInt(document.getElementById('height').value);
-        let steps = parseInt(document.getElementById('steps').value);
         let seed = document.getElementById('seed').value;
         let version = parseInt(document.getElementById('version').value);
 
         runButton.setAttribute('disabled', 'disabled');
 
-        result.setAttribute('src', '/gui/spinner-white.svg');
         progressSpinner.style.display = 'block';
         progress.style.display = 'block';
+        progress.innerText = '0' + '/' + steps;
 
         let requestUrl = '/api/render?' + new URLSearchParams([
             ['prompt', encodeURI(prompt.value)],
@@ -216,7 +220,7 @@
 
         setTimeout(function() {
             pullAndWait(response.uuid, 1, 0);
-        }, 4000);
+        }, 15000);
     }
 
 --></script>
