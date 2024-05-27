@@ -72,13 +72,18 @@ graph TD
   * Get `/render/?prompt=some+prompt&steps=25&height=1024&width=768` to start processing
   * Take `uuid` field from response
   * Try to get `/result/{uuid}.jpg` while it becomes ready or try to see intermediatory timesteps like `/result/{uuid}-{step}.jpg`
+    * At first time you should wait while weights will be downloaded from HuggingFace to Pod storage cache  
   * Also any such pod from this template can be tested by hands via simple debug GUI on `https://pod-url/`
+    * it's pretty simple yet and looks like this:  
+      ![alt text](ui-screenshot-1.png "Title")
+      ![alt text](ui-screenshot-2.png "Title")
+
 
 ### Usage in local docker
 
 * Clone this repository
 * Run `docker-compose up --build -d` in root folder
-* Run API and server worker with Redis job queue:
+* Run task:
   * `curl http://localhost:80/api/render/?prompt=Some%20prompt`
 
 ### TODO:
