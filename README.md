@@ -4,6 +4,9 @@ A PoC of simple asynchronuous json API for running ML-models tasks via Redis que
 
 > Pipelines based on `huggingface/candle` ML framework (https://github.com/huggingface/candle)
 
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/siddthartha/enso-ml/docker-image.yml?logo=docker&label=docker%20build)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/siddthartha/enso-ml/rust.yml?logo=rust&label=rust%20build)
+
 ### Principle schema
 ```mermaid
 graph TD
