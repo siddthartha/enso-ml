@@ -8,10 +8,18 @@ A PoC of simple asynchronuous json API for running ML-models tasks via Redis que
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/siddthartha/enso-darknet/rust.yml?logo=rust&label=rust)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/siddthartha/enso-darknet/docker-image.yml)
 
-  | field | mean |
-  |--|--|
-  | `prompt` | *string* |
-
+### Principle schema
+```mermaid
+graph TD
+    A[Client] -- HTTP GET /api/render --> B((Enso ML API))
+    B -. task uuid .-> A
+    B -.publish.-> C[[Redis task queue]]
+    C -.subscribe.-> D[Enso Worker GPU 2]
+    C -.subscribe.-> E[Enso Worker GPU 1]
+    E --> F
+    D --> F{{FS / MinIO / S3 storage}}
+    F --GET /result/uuid-step.jpg--> A
+```
 ### API
  > `GET /render/?prompt=Some+prompt`
   * required fields:
