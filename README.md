@@ -46,7 +46,15 @@ A PoC of simple asynchronuous json API for running ML-models tasks via Redis que
     }
     ```
   * `uuid` can be used to fetch result image for every step like `/result/{uuid}-{step}.jpg`
-
+> `GET /api/health`
+  * result:
+```
+{
+  "status": false,
+  "uuid": "2099f4ea-a10a-7162-96ea-88f80edd20aa",
+  "has_cuda": true
+}
+```
 ### Usage with RunPod
 
 * Create and run CPU Pod from official Redis image (`redis:latest` for example)
