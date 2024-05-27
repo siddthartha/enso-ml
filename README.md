@@ -8,6 +8,45 @@ A PoC of simple asynchronuous json API for running ML-models tasks via Redis que
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/siddthartha/enso-darknet/rust.yml?logo=rust&label=rust)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/siddthartha/enso-darknet/docker-image.yml)
 
+  | field | mean |
+  |--|--|
+  | `prompt` | *string* |
+
+### API
+ > `GET /render/?prompt=Some+prompt`
+  * required fields:
+
+| parameter | meaning  |
+|-----------|----------|
+| `prompt`  | *string* |
+
+  * avaiable fields:
+
+| parameter       | meaning                                    | default value          |
+|-----------------|--------------------------------------------|------------------------|
+| `seed`          | *signed 64-bit integer*                    | *64-bit random number* |
+| `width`         | *unsigned 32-bit integer*                  | 768                    |
+| `height`        | *unsigned 32-bit integer*                  | 768                    |
+| `steps`         | *unsigned 8-bit integer* in range `[1-50]` | 24                     |
+| `version`       | *unsigned 8-bit integer* in range `[1-4]`  | 3 (*SDXL 1.0*)         |
+| `intermediates` | *bool*                                     | true                   |
+
+    
+  * result is a JSON-representation of a task:
+    ```
+    {
+        "uuid":"44aecf11-69f2-3d5e-7617-52b2c6bb80a8",
+        "prompt":"beauty%20and%20the%20beast",
+        "seed":-3321392915133399677,
+        "width":768,
+        "height":768,
+        "steps":24,
+        "intermediates":true,
+        "version":3
+    }
+    ```
+  * `uuid` can be used to fetch result image for every step like `/result/{uuid}-{step}.jpg`
+
 ### Usage with RunPod
 
 * Create and run CPU Pod from official Redis image (`redis:latest` for example)
@@ -19,7 +58,7 @@ A PoC of simple asynchronuous json API for running ML-models tasks via Redis que
   * Try to get `/result/{uuid}.jpg` while it becomes ready or try to see intermediatory timesteps like `/result/{uuid}-{step}.jpg`
   * Also any such pod from this template can be tested by hands via simple debug GUI on `https://pod-url/`
 
-### Usage in docker
+### Usage in local docker
 
 * Clone this repository
 * Run `docker-compose up --build -d` in root folder
@@ -28,12 +67,20 @@ A PoC of simple asynchronuous json API for running ML-models tasks via Redis que
 
 ### TODO:
 
-* refactore API to REST-like
-* put results to S3
-* multiple GPU devices support
-* load balancing
-* add other various pipelines (Llama, Yolo, etc..)
+* [x] 1.5, 2.1, SDXL 1.0, SDXL Turbo support
+  * [ ] using any weights from https://civitai.tech/ by uuid
+  * [ ] LoRa support
+* [ ] putting results to S3
+  * [ ] fetch as Base64
+* [ ] WebSockets for GUI progress & logging
+* [ ] multiple GPU devices support
+* [ ] load balancing / improving queues
+* [ ] other various ML-pipelines from Candle 
+  * LLMs
+  * Yolo
+  * SAM
+  * &hellip;
 
-# You can donate my work on this repository
+# You can donate my work on this repository or some wanted features
 
 > USDT/TRC20 address `TWwumLM9UXZbZdW8ySqWNNNkoqvQJ8PMdK`
