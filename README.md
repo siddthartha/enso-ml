@@ -23,13 +23,13 @@ graph TD
  > `GET /render/?prompt=Some+prompt`
   * required fields:
 
-| parameter | meaning  |
+| parameter | type     |
 |-----------|----------|
 | `prompt`  | *string* |
 
   * avaiable fields:
 
-| parameter       | meaning                                    | default value          |
+| parameter       | type                                       | default value          |
 |-----------------|--------------------------------------------|------------------------|
 | `seed`          | *signed 64-bit integer*                    | *64-bit random number* |
 | `width`         | *unsigned 32-bit integer*                  | 768                    |
