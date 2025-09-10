@@ -9,7 +9,10 @@ RUN apt-get update && \
 
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 
-ENV PATH $PATH:/root/.cargo/bin
+ENV CUDA_ROOT=/usr/local/cuda
+ENV PATH=/root/.cargo/bin:$PATH
+ENV PATH=$CUDA_ROOT/bin:$PATH
+ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 
 RUN USER=root cargo new --bin enso-ml
 WORKDIR /enso-ml
@@ -38,6 +41,6 @@ COPY ./data ./data
 COPY ./media ./media
 COPY ./gui ./gui
 
-# start API server
+# start ML worker and API server
 CMD (cargo build --release) && (./ml-worker & ./enso-ml)
 

@@ -81,7 +81,7 @@ graph TD
 ### Usage in local docker
 
 * Clone this repository
-* Run `docker-compose up --build -d` in root folder
+* Run `docker-compose up --build -d` in a root folder
 * Run task:
   * `curl http://localhost:80/api/render/?prompt=Some%20prompt`
 
