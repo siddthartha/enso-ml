@@ -32,6 +32,16 @@ RUN \
     ln -s -r ./target/release/enso-ml ./enso-ml \
     && ln -s -r ./target/release/ml-worker ./ml-worker
 
+# Принудительно указать compute capabilities
+#ENV CUDA_COMPUTE_CAP="75,80,86"
+#ENV CUDA_ARCH_LIST="7.5;8.0;8.6"
+
+# Установить фейковый nvidia-smi для build-time
+#RUN echo '#!/bin/bash\necho "GPU 0: Tesla V100 (UUID: GPU-fake)"' > /usr/bin/nvidia-smi && \
+#    chmod +x /usr/bin/nvidia-smi
+
+#RUN cargo build --release
+
 # cleanup resources needed for rebuild only
 #RUN cargo clean \
 #    && rm -rf ${CARGO_HOME}/registry/* \
@@ -42,5 +52,5 @@ COPY ./media ./media
 COPY ./gui ./gui
 
 # start ML worker and API server
-CMD (cargo build --release) && (./ml-worker & ./enso-ml)
+CMD ["sh", "-c", "(cargo build --release) && (./ml-worker & ./enso-ml)"]
 
