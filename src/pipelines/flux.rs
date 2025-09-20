@@ -4,7 +4,6 @@ use anyhow::{Error as E, Result};
 use candle_core::{IndexOp, Module, Tensor, DType};
 use candle_transformers::models::{clip, flux, t5};
 use candle_nn::VarBuilder;
-use clap::Parser;
 use tokenizers::Tokenizer;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -17,9 +16,6 @@ struct FluxTask {
 
     /// Use the quantized model.
     quantized: bool,
-
-    /// Enable tracing (generates a trace-timestamp.json file).
-    tracing: bool,
 
     /// The height in pixels of the generated image.
     height: Option<usize>,
@@ -52,7 +48,6 @@ fn run(args: FluxTask) -> Result<()> {
         cpu,
         height,
         width,
-        tracing,
         decode_only,
         model,
         quantized,
@@ -153,9 +148,9 @@ fn run(args: FluxTask) -> Result<()> {
                 let img = flux::sampling::get_noise(1, height, width, &device)?.to_dtype(dtype)?;
                 let state = if quantized {
                     flux::sampling::State::new(
-                        &t5_emb.to_dtype(candle_core::DType::F32)?,
-                        &clip_emb.to_dtype(candle_core::DType::F32)?,
-                        &img.to_dtype(candle_core::DType::F32)?,
+                        &t5_emb.to_dtype(DType::F32)?,
+                        &clip_emb.to_dtype(DType::F32)?,
+                        &img.to_dtype(DType::F32)?,
                     )?
                 } else {
                     flux::sampling::State::new(&t5_emb, &clip_emb, &img)?
@@ -232,7 +227,7 @@ fn run(args: FluxTask) -> Result<()> {
         model.decode(&img)?
     };
     println!("img\n");
-    let img = ((img.clamp(-1f32, 1f32)? + 1.0)? * 127.5)?.to_dtype(candle_core::DType::U8)?;
+    let img = ((img.clamp(-1f32, 1f32)? + 1.0)? * 127.5)?.to_dtype(DType::U8)?;
     let filename = match args.seed {
         None => "out.jpg".to_string(),
         Some(s) => format!("out-{s}.jpg"),
