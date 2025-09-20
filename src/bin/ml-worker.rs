@@ -1,7 +1,7 @@
 use redis::{Client, Commands};
 use std::string::String;
 use enso_ml::models::SDRequest;
-use enso_ml::{RENDER_QUEUE, TASK_PREFIX, StableDiffusionTask, StableDiffusionVersion};
+use enso_ml::{SD_RENDER_QUEUE, TASK_PREFIX, pipelines::sd::StableDiffusionTask, pipelines::sd::StableDiffusionVersion};
 
 #[tokio::main]
 pub async fn main() -> anyhow::Result<()>
@@ -11,7 +11,7 @@ pub async fn main() -> anyhow::Result<()>
     let mut write_connection = client.get_connection()?;
     let mut pubsub_connection = connection.as_pubsub();
 
-    pubsub_connection.subscribe(RENDER_QUEUE)?;
+    pubsub_connection.subscribe(SD_RENDER_QUEUE)?;
 
     loop {
         let msg = pubsub_connection.get_message()?;

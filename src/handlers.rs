@@ -4,7 +4,7 @@ use candle_core::utils::cuda_is_available;
 use redis::AsyncCommands;
 use warp::{reject, Rejection, Reply};
 use warp::reply::{json};
-use enso_ml::{DEFAULT_STEPS, generate_uuid_v4, RENDER_QUEUE, STEPS_LIMIT};
+use enso_ml::{generate_uuid_v4, DEFAULT_STEPS, SD_RENDER_QUEUE, STEPS_LIMIT};
 use serde_json;
 use crate::{HealthcheckResponse, SDRequest};
 
@@ -78,7 +78,7 @@ pub async fn render_handler(q: HashMap<String, String>) -> WebResult<impl Reply>
             let mut publish_conn = client.get_multiplexed_tokio_connection().await.unwrap();
 
             publish_conn.publish::<&str, &str, i8>(
-                RENDER_QUEUE,
+                SD_RENDER_QUEUE,
                 serde_json::to_string(request).unwrap().as_str()
             ).await.unwrap();
 
