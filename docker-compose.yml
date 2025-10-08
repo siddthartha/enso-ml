@@ -10,7 +10,6 @@ services:
       - "80:80"
     command: >
       bash -c "true \
-      && sleep infinity
       && (cargo build --release)
       && (./ml-worker & ./enso-ml)
       "

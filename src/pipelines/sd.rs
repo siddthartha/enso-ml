@@ -227,17 +227,20 @@ impl StableDiffusionTask {
         let mut final_latents = Tensor::randn(0f32, 1., (2, 3), &device)?;
 
         for idx in 0..num_samples {
+
 //            let timesteps = scheduler.timesteps();
-            let timesteps = {
-                let ts = scheduler.timesteps();
-                ts.to_vec() // или ts.iter().copied().collect()
-            };
+
+            let timesteps: Vec<_> = scheduler.timesteps().iter().copied().collect();
+//             let timesteps = {
+//                 let ts = scheduler.timesteps();
+//                 ts.to_vec() // или ts.iter().copied().collect()
+//             };
             let latents = match &init_latent_dist {
                 Some(init_latent_dist) => {
                     let latents = (init_latent_dist.sample()? * vae_scale)?.to_device(&device)?;
-                    if t_start < timesteps.len() {
+                    if t_start < scheduler.timesteps().len() {
                         let noise = latents.randn_like(0f64, 1f64)?;
-                        scheduler.add_noise(&latents, noise, timesteps[t_start])?
+                        scheduler.add_noise(&latents, noise, scheduler.timesteps()[t_start])?
                     } else {
                         latents
                     }
@@ -256,7 +259,7 @@ impl StableDiffusionTask {
             let mut latents = latents.to_dtype(dtype)?;
 
             println!("starting sampling");
-            for (timestep_index, &timestep) in timesteps.iter().enumerate() {
+            for (timestep_index, timestep) in timesteps.iter().enumerate() {
                 if timestep_index < t_start {
                     continue;
                 }
@@ -268,10 +271,10 @@ impl StableDiffusionTask {
                 };
 
                 println!("scheduler.scale_model_input");
-                let latent_model_input = scheduler.scale_model_input(latent_model_input, timestep)?;
+                let latent_model_input = scheduler.scale_model_input(latent_model_input, *timestep)?;
                 println!("unet.forward");
                 let noise_pred =
-                    unet.forward(&latent_model_input, timestep as f64, &text_embeddings)?;
+                    unet.forward(&latent_model_input, *timestep as f64, &text_embeddings)?;
 
                 let noise_pred = if use_guide_scale {
                     let noise_pred = noise_pred.chunk(2, 0)?;
@@ -283,7 +286,7 @@ impl StableDiffusionTask {
                 };
 
                 println!("scheduler.step");
-                latents = scheduler.step(&noise_pred, timestep, &latents)?;
+                latents = scheduler.step(&noise_pred, *timestep, &latents)?;
                 let dt = start_time.elapsed().as_secs_f32();
                 println!("step {}/{n_steps} done, {:.2}s", timestep_index + 1, dt);
 
