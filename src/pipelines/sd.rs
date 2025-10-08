@@ -5,6 +5,8 @@ use tokenizers::Tokenizer;
 use candle_core::{DType, Device, IndexOp, Module, Tensor, D};
 use candle_core::utils::cuda_is_available;
 use candle_transformers::models::stable_diffusion;
+use hf_hub::api::sync::ApiBuilder;
+use hf_hub::Cache;
 use stable_diffusion::vae::AutoEncoderKL;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -438,12 +440,23 @@ impl ModelFile {
                 };
 
                 // let cache = Cache::new("./data".into());
-                // let cache = cache.repo(hf_hub::Repo::new(repo.to_string(), hf_hub::RepoType::Model));
-                // let filename = cache.get(path).unwrap();
-
-                let filename = Api::new()?.model(repo.to_string()).get(path)?;
-
+                // let cache_repo = cache.repo(hf_hub::Repo::new(repo.to_string(), hf_hub::RepoType::Model));
+                // let filename = cache_repo.get(path);
+                //
+                // let result= match filename {
+                //     Some(_filename) => _filename,
+                //     None => Api::new()?.model(repo.to_string()).get(path)?
+                // };
+                let filename = ApiBuilder::new()
+                    .with_progress(false)
+                    .with_cache_dir("/enso-ml/data".into())
+                    .build()
+                    .unwrap()
+                    .model(repo.to_string())
+                    .get(path)
+                    .unwrap();
                 Ok(filename)
+                //
             }
         }
     }
