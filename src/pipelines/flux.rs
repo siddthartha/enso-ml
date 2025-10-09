@@ -2,7 +2,8 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use anyhow::{Error as E, Result};
 
-use candle_core::{IndexOp, Module, Tensor, DType};
+use candle_core::{Module, Tensor, DType};
+use candle_core::utils::cuda_is_available;
 use candle_transformers::models::{clip, flux, t5};
 use candle_nn::VarBuilder;
 use hf_hub::api::sync::ApiBuilder;
@@ -44,6 +45,15 @@ pub enum Model {
     Dev,
 }
 
+impl Model {
+    fn repo_name(&self) -> &'static str {
+        match self {
+            Self::Dev => "black-forest-labs/FLUX.1-dev",
+            Self::Schnell => "black-forest-labs/FLUX.1-schnell",
+        }
+    }
+}
+
 impl RenderTask for FluxTask {
     fn run(&self, seed: i64) -> Result<Tensor, anyhow::Error>
     {
@@ -71,17 +81,16 @@ impl RenderTask for FluxTask {
             .build()
             .unwrap();
 
-        let bf_repo = {
-            let name = match model {
-                Model::Dev => "black-forest-labs/FLUX.1-dev",
-                Model::Schnell => "black-forest-labs/FLUX.1-schnell",
-            };
-            api.repo(hf_hub::Repo::model(name.to_string()))
-        };
+        let bf_repo = api.repo(
+            hf_hub::Repo::model(model.repo_name().to_string())
+        );
         let device = candle_examples::device(cpu)?;
-        if let seed = seed as u64 {
-            device.set_seed(seed)?;
+
+        if cuda_is_available()
+        {
+            device.set_seed(seed as u64)?;
         }
+
         let dtype = device.bf16_default_to_f32();
         let img = match decode_only {
             None => {

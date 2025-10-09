@@ -7,7 +7,6 @@ use candle_core::{DType, Device, IndexOp, Module, Tensor, D};
 use candle_core::utils::cuda_is_available;
 use candle_transformers::models::stable_diffusion;
 use hf_hub::api::sync::ApiBuilder;
-use hf_hub::Cache;
 use stable_diffusion::vae::AutoEncoderKL;
 use crate::pipelines::RenderTask;
 
@@ -334,7 +333,7 @@ impl RenderTask for StableDiffusionTask {
 }
 
 impl StableDiffusionVersion {
-    fn repo(&self) -> &'static str {
+    fn repo_name(&self) -> &'static str {
         match self {
             Self::Xl => "stabilityai/stable-diffusion-xl-base-1.0",
             Self::V2_1 => "stabilityai/stable-diffusion-2-1",
@@ -399,7 +398,6 @@ impl ModelFile {
         version: StableDiffusionVersion,
         use_f16: bool,
     ) -> Result<std::path::PathBuf> {
-        use hf_hub::api::sync::Api;
         match filename {
             Some(filename) => Ok(std::path::PathBuf::from(filename)),
             None => {
@@ -420,9 +418,9 @@ impl ModelFile {
                     Self::Tokenizer2 => {
                         ("laion/CLIP-ViT-bigG-14-laion2B-39B-b160k", "tokenizer.json")
                     }
-                    Self::Clip => (version.repo(), version.clip_file(use_f16)),
-                    Self::Clip2 => (version.repo(), version.clip2_file(use_f16)),
-                    Self::Unet => (version.repo(), version.unet_file(use_f16)),
+                    Self::Clip => (version.repo_name(), version.clip_file(use_f16)),
+                    Self::Clip2 => (version.repo_name(), version.clip2_file(use_f16)),
+                    Self::Unet => (version.repo_name(), version.unet_file(use_f16)),
                     Self::Vae => {
                         // Override for SDXL when using f16 weights.
                         // See https://github.com/huggingface/candle/issues/1060
@@ -436,7 +434,7 @@ impl ModelFile {
                                 "diffusion_pytorch_model.safetensors",
                             )
                         } else {
-                            (version.repo(), version.vae_file(use_f16))
+                            (version.repo_name(), version.vae_file(use_f16))
                         }
                     }
                 };
