@@ -8,8 +8,8 @@ pub trait RenderTask {
     fn run(&self, seed: i64) -> Result<Tensor, Error>;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(tag = "pipeline_type")]
 pub enum Task {
     StableDiffusion(sd::StableDiffusionTask),
     Flux(flux::FluxTask),

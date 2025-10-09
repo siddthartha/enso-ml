@@ -4,8 +4,9 @@ use candle_core::utils::cuda_is_available;
 use redis::AsyncCommands;
 use warp::{reject, Rejection, Reply};
 use warp::reply::{json};
-use enso_ml::{generate_uuid_v4, DEFAULT_STEPS, SD_RENDER_QUEUE, STEPS_LIMIT};
+use enso_ml::{generate_uuid_v4, DEFAULT_STEPS, SD_RENDER_QUEUE, STEPS_LIMIT, FLUX_RENDER_QUEUE};
 use serde_json;
+use enso_ml::pipelines::{flux, sd, Task};
 use crate::{HealthcheckResponse, RenderRequest};
 
 type WebResult<T> = Result<T, Rejection>;
@@ -43,6 +44,11 @@ pub async fn render_handler(q: HashMap<String, String>) -> WebResult<impl Reply>
         }
         Some(prompt) => {
             let request = &RenderRequest {
+                pipeline_type: match q.get("pipeline").unwrap().to_string().as_str() {
+                    "sd" => "StableDiffusion".to_string(),
+                    "flux" => "Flux".to_string(),
+                    _ => "StableDiffusion".to_string(),
+                },
                 uuid: generate_uuid_v4(),
                 prompt: prompt.clone(),
                 seed: match q.get("seed") {
@@ -78,7 +84,11 @@ pub async fn render_handler(q: HashMap<String, String>) -> WebResult<impl Reply>
             let mut publish_conn = client.get_multiplexed_tokio_connection().await.unwrap();
 
             publish_conn.publish::<&str, &str, i8>(
-                SD_RENDER_QUEUE,
+                match request.pipeline_type.to_string().as_str() {
+                    "StableDiffusion" => SD_RENDER_QUEUE,
+                    "Flux" => FLUX_RENDER_QUEUE,
+                    _ => SD_RENDER_QUEUE,
+                },
                 serde_json::to_string(request).unwrap().as_str()
             ).await.unwrap();
 
