@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use anyhow::{Error as E, Result};
 
@@ -449,14 +450,17 @@ impl ModelFile {
                 // };
                 let filename = ApiBuilder::new()
                     .with_progress(false)
-                    .with_cache_dir("/enso-ml/data".into())
+                    .with_cache_dir(
+                        PathBuf::from(std::env::var("HF_HOME")
+                            .unwrap_or("./data".into()))
+                    )
                     .build()
                     .unwrap()
                     .model(repo.to_string())
                     .get(path)
                     .unwrap();
+
                 Ok(filename)
-                //
             }
         }
     }

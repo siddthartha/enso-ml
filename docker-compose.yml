@@ -12,6 +12,7 @@ services:
       bash -c "true \
       && (cargo build --release)
       && (./ml-worker & ./enso-ml)
+      && sleep infinity
       "
     volumes:
       - ./data:/enso-ml/data
