@@ -6,6 +6,7 @@ use candle_core::{Module, IndexOp, Tensor, DType};
 use candle_core::utils::cuda_is_available;
 use candle_transformers::models::{clip, flux, t5};
 use candle_nn::VarBuilder;
+use candle_transformers::models::mimi::candle;
 use hf_hub::api::sync::ApiBuilder;
 use tokenizers::Tokenizer;
 use crate::pipelines::{RenderTask, Task};
@@ -69,13 +70,16 @@ impl RenderTask for FluxTask {
             decode_only,
             model,
             quantized,
+            use_dmmv,
             ..
         } = self.clone();
 
         let width = width.unwrap_or(1360);
         let height = height.unwrap_or(768);
 
-        // let api = hf_hub::api::sync::Api::new()?;
+        #[cfg(feature = "cuda")]
+        candle::quantized::cuda::set_force_dmmv(use_dmmv);
+
         let api = ApiBuilder::new()
             .with_progress(false)
             .with_cache_dir(
