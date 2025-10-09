@@ -4,7 +4,7 @@ mod handlers;
 use std::collections::HashMap;
 use warp::{Filter};
 
-use crate::models::SDRequest;
+use crate::models::RenderRequest;
 use crate::models::HealthcheckResponse;
 use crate::handlers::{health_checker_handler, render_handler};
 

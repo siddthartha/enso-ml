@@ -9,6 +9,7 @@ use candle_transformers::models::stable_diffusion;
 use hf_hub::api::sync::ApiBuilder;
 use hf_hub::Cache;
 use stable_diffusion::vae::AutoEncoderKL;
+use crate::pipelines::RenderTask;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct StableDiffusionTask {
@@ -100,8 +101,10 @@ impl StableDiffusionTask {
             },
         }
     }
+}
 
-    pub fn run(&self, seed: i64) -> Result<Tensor, anyhow::Error>
+impl RenderTask for StableDiffusionTask {
+    fn run(&self, seed: i64) -> Result<Tensor, anyhow::Error>
     {
 
         let StableDiffusionTask {
@@ -328,9 +331,7 @@ impl StableDiffusionTask {
 
         Ok(final_latents)
     }
-
 }
-
 
 impl StableDiffusionVersion {
     fn repo(&self) -> &'static str {

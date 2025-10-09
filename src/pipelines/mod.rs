@@ -1,2 +1,76 @@
+use anyhow::Error;
+use candle_core::Tensor;
+use crate::pipelines::flux::FluxTask;
+use crate::pipelines::sd::StableDiffusionTask;
+use serde::{Serialize, Deserialize};
+
+pub trait RenderTask {
+    fn run(&self, seed: i64) -> Result<Tensor, Error>;
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum Task {
+    StableDiffusion(sd::StableDiffusionTask),
+    Flux(flux::FluxTask),
+}
+
 pub mod sd;
 pub mod flux;
+
+impl RenderTask for Task {
+    fn run(&self, seed: i64) -> Result<Tensor, Error> {
+        match self {
+            Task::StableDiffusion(task) => task.run(seed),
+            Task::Flux(task) => task.run(seed),
+        }
+    }
+}
+
+impl Task {
+    // Получить как SD (если это SD)
+    pub fn as_sd(&self) -> Option<&StableDiffusionTask> {
+        match self {
+            Task::StableDiffusion(task) => Some(task),
+            _ => None,
+        }
+    }
+
+    pub fn as_flux(&self) -> Option<&FluxTask> {
+        match self {
+            Task::Flux(task) => Some(task),
+            _ => None,
+        }
+    }
+
+    // Mutable версии
+    pub fn as_sd_mut(&mut self) -> Option<&mut StableDiffusionTask> {
+        match self {
+            Task::StableDiffusion(task) => Some(task),
+            _ => None,
+        }
+    }
+
+    pub fn as_flux_mut(&mut self) -> Option<&mut FluxTask> {
+        match self {
+            Task::Flux(task) => Some(task),
+            _ => None,
+        }
+    }
+
+    // Или unwrap версии если уверены
+    pub fn unwrap_sd(&self) -> &StableDiffusionTask {
+        match self {
+            Task::StableDiffusion(task) => task,
+            _ => panic!("Not a StableDiffusion task"),
+        }
+    }
+
+    pub fn unwrap_flux(&self) -> &FluxTask {
+        match self {
+            Task::Flux(task) => task,
+            _ => panic!("Not a Flux task"),
+        }
+    }
+
+}

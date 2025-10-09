@@ -6,7 +6,7 @@ use warp::{reject, Rejection, Reply};
 use warp::reply::{json};
 use enso_ml::{generate_uuid_v4, DEFAULT_STEPS, SD_RENDER_QUEUE, STEPS_LIMIT};
 use serde_json;
-use crate::{HealthcheckResponse, SDRequest};
+use crate::{HealthcheckResponse, RenderRequest};
 
 type WebResult<T> = Result<T, Rejection>;
 
@@ -42,7 +42,7 @@ pub async fn render_handler(q: HashMap<String, String>) -> WebResult<impl Reply>
             Err(reject::reject())
         }
         Some(prompt) => {
-            let request = &SDRequest {
+            let request = &RenderRequest {
                 uuid: generate_uuid_v4(),
                 prompt: prompt.clone(),
                 seed: match q.get("seed") {
