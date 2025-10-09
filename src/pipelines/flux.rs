@@ -2,16 +2,19 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use anyhow::{Error as E, Result};
 
-use candle_core::{Module, Tensor, DType};
+use candle_core::{Module, IndexOp, Tensor, DType};
 use candle_core::utils::cuda_is_available;
 use candle_transformers::models::{clip, flux, t5};
 use candle_nn::VarBuilder;
 use hf_hub::api::sync::ApiBuilder;
 use tokenizers::Tokenizer;
-use crate::pipelines::RenderTask;
+use crate::pipelines::{RenderTask, Task};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct FluxTask {
+    /// Task UUID v4
+    pub uuid: String,
+
     /// The prompt to be used for image generation.
     pub prompt: String,
 
@@ -58,6 +61,7 @@ impl RenderTask for FluxTask {
     fn run(&self, seed: i64) -> Result<Tensor, anyhow::Error>
     {
         let FluxTask {
+            uuid,
             prompt,
             cpu,
             height,
@@ -244,11 +248,8 @@ impl RenderTask for FluxTask {
         };
         println!("img\n");
         let img = ((img.clamp(-1f32, 1f32)? + 1.0)? * 127.5)?.to_dtype(DType::U8)?;
-        // let filename = match seed.clone() {
-        //     None => "out.jpg".to_string(),
-        //     Some(s) => format!("out-{s}.jpg"),
-        // };
-        // candle_examples::save_image(&img.i(0)?, filename)?;
+        let filename = Task::get_output_filename(uuid.clone());
+        candle_examples::save_image(&img.i(0)?, filename)?;
         Ok(img)
     }
 }

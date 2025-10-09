@@ -28,6 +28,11 @@ impl RenderTask for Task {
 }
 
 impl Task {
+    /// Where to write output in FS (template string)
+    pub fn get_output_filename(uuid: String) -> String {
+        format!("./media/{}.jpg", uuid.clone())
+    }
+
     // Получить как SD (если это SD)
     pub fn as_sd(&self) -> Option<&StableDiffusionTask> {
         match self {

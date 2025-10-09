@@ -47,6 +47,7 @@ pub async fn main() -> anyhow::Result<()>
 
         let task = match msg.get_channel_name() {
             SD_RENDER_QUEUE => Task::StableDiffusion(StableDiffusionTask {
+                uuid: uuid.clone().to_string(),
                 prompt: prompt.clone(),
                 height: Some(height as usize),
                 width: Some(width as usize),
@@ -69,6 +70,7 @@ pub async fn main() -> anyhow::Result<()>
                 intermediary_images,
             }),
             FLUX_RENDER_QUEUE => Task::Flux(FluxTask {
+                uuid: uuid.clone().to_string(),
                 prompt: prompt.clone(),
                 cpu: false,
                 quantized: false,
@@ -78,7 +80,7 @@ pub async fn main() -> anyhow::Result<()>
                 model: match version {
                     1 => Model::Schnell,
                     2 => Model::Dev,
-                    _ => Model::Dev,
+                    _ => Model::Schnell,
                 },
                 use_dmmv: false,
                 seed: Some(seed.clone() as u64),

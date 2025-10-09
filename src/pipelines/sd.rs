@@ -8,10 +8,13 @@ use candle_core::utils::cuda_is_available;
 use candle_transformers::models::stable_diffusion;
 use hf_hub::api::sync::ApiBuilder;
 use stable_diffusion::vae::AutoEncoderKL;
-use crate::pipelines::RenderTask;
+use crate::pipelines::{RenderTask, Task};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct StableDiffusionTask {
+    /// Task UUID v4
+    pub uuid: String,
+
     /// The prompt to be used for image generation.
     pub prompt: String,
 
@@ -105,8 +108,8 @@ impl StableDiffusionTask {
 impl RenderTask for StableDiffusionTask {
     fn run(&self, seed: i64) -> Result<Tensor, anyhow::Error>
     {
-
         let StableDiffusionTask {
+            uuid,
             prompt,
             height,
             width,
@@ -302,7 +305,7 @@ impl RenderTask for StableDiffusionTask {
                         vae_scale,
                         bsize,
                         idx,
-                        &final_image,
+                        Task::get_output_filename(uuid.clone()).as_str(),
                         num_samples,
                         Some(timestep_index + 1),
                     )?;
@@ -320,7 +323,7 @@ impl RenderTask for StableDiffusionTask {
                 vae_scale,
                 bsize,
                 idx,
-                &final_image,
+                Task::get_output_filename(uuid.clone()).as_str(),
                 num_samples,
                 None,
             )?;
