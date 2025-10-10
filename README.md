@@ -87,9 +87,16 @@ graph TD
 
 ### TODO:
 
-* [x] 1.5, 2.1, SDXL 1.0, SDXL Turbo support
-  * [ ] using any weights from https://civitai.tech/ by uuid
+* [x] Stable Diffusion support
+  * [x] 1.5
+  * [x] 2.1
+  * [x] SDXL 1.0
+  * [x] SDXL Turbo
+  * [ ] using weights from https://civitai.tech/
   * [ ] LoRa support
+* [x] Flux 
+  * [x] Schnell
+  * [x] Dev
 * [ ] putting results to S3
   * [ ] fetch as Base64
 * [ ] WebSockets for GUI progress & logging
