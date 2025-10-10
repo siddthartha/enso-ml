@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct RenderRequest {
-    pub pipeline_type: String,
+    pub pipeline: String,
     pub uuid: String,
     pub prompt: String,
     pub seed: i64,

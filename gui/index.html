@@ -40,9 +40,10 @@
         <span id="progressStep" style="position:absolute; top: 5em; font-size: 9pt; display:none;"></span>
         <blockquote style="margin-top: 0;">
             GPU RunPod<br />
-            Stable Diffusion <label for="version">version</label>&nbsp;<select id="version" style="width:5em;"><option value="1">1.5</option><option value="2">2.1</option><option value="3" selected="selected">XL</option><option value="4">XL Turbo</option></select><br />
-            CUDA 11.8<br />
-            Candle 0.5.1
+            <select id="pipeline"  onclick="pipelineChanged()"><option selected value="sd">Stable Diffusion</option><option value="flux">Flux</option></select>
+            <label for="version">version</label>&nbsp;<select id="version" style="width:5em;"><option value="1">1.5</option><option value="2">2.1</option><option value="3" selected="selected">XL</option><option value="4">XL Turbo</option></select><br />
+            CUDA 13.0.1<br />
+            Candle 0.9.1
         </blockquote>
     </div>
     <div class="col-xs-3">
@@ -84,6 +85,8 @@
 <!--</div>-->
 
 <script><!--
+    let pipeline = document.getElementById('pipeline');
+    let version = document.getElementById('version');
     let prompt = document.getElementById('prompt');
     let result = document.getElementById('result');
     let progressSpinner = document.getElementById('progress')
@@ -91,6 +94,15 @@
     let runButton = document.getElementById('runButton');
     let statusPre = document.getElementById('status');
     let steps = parseInt(document.getElementById('steps').value);
+
+    function pipelineChanged() {
+        console.log('changed');
+        document.getElementById('version').innerHTML = '';
+        pipeline.style.display = 'none';
+        if (document.getElementById('pipeline').value === 'sd') document.getElementById('version').innerHTML = '<option value="1" selected>1.5</option><option value="2">2.1</option><option value="3">XL</option><option value="4">XL Turbo</option>';
+        else document.getElementById('version').innerHTML = '<option value="1" selected>Schnell</option><option value="2">Dev</option>';
+        pipeline.style.display = '';
+    }
 
     function sleep(milliseconds)
     {
@@ -181,7 +193,8 @@
 
     function generate()
     {
-        steps = parseInt(document.getElementById('steps').value);
+        let pipeline = document.getElementById('pipeline').value;
+        let steps = parseInt(document.getElementById('steps').value);
 
         let width = parseInt(document.getElementById('width').value);
         let height = parseInt(document.getElementById('height').value);
@@ -195,6 +208,7 @@
         progress.innerText = '0' + '/' + steps;
 
         let requestUrl = '/api/render?' + new URLSearchParams([
+            ['pipeline', encodeURI(pipeline)],
             ['prompt', encodeURI(prompt.value)],
             ['steps', steps],
             ['width', width],

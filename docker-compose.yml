@@ -18,6 +18,7 @@ services:
       - ./data:/enso-ml/data
       - ./media:/enso-ml/media
       - ./src:/enso-ml/src
+      - ./gui:/enso-ml/gui
       - ./Cargo.toml:/enso-ml/Cargo.toml
     depends_on:
       - redis

@@ -6,7 +6,6 @@ use candle_core::{Module, IndexOp, Tensor, DType};
 use candle_core::utils::cuda_is_available;
 use candle_transformers::models::{clip, flux, t5};
 use candle_nn::VarBuilder;
-use candle_transformers::models::mimi::candle;
 use hf_hub::api::sync::ApiBuilder;
 use tokenizers::Tokenizer;
 use crate::pipelines::{RenderTask, Task};

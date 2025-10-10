@@ -114,7 +114,6 @@ impl RenderTask for StableDiffusionTask {
             height,
             width,
             n_steps,
-            final_image,
             sliced_attention_size,
             sd_version,
             clip_weights,
