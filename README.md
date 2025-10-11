@@ -23,9 +23,10 @@ graph TD
  > `GET /render/?prompt=Some+prompt`
   * required fields:
 
-| parameter | type     |
-|-----------|----------|
-| `prompt`  | *string* |
+| parameter  | type                        |
+|------------|-----------------------------|
+| `pipeline` | *string* (_"sd"_, _"flux"_) |
+| `prompt`   | *string*                    |
 
   * avaiable fields:
 
@@ -38,7 +39,16 @@ graph TD
 | `version`       | *unsigned 8-bit integer* in range `[1-4]`  | 3 (*SDXL 1.0*)         |
 | `intermediates` | *bool*                                     | true                   |
 
-    
+* version codes for `version` parameter:
+  * SD:
+    * 1 => 1.5 (_default_)
+    * 2 => 2.1
+    * 3 => SDXL 1.0
+    * 4 => SDXL Turbo
+  * Flux:
+    * 1 => Dev (_default_)
+    * 2 => Schnell
+
   * result is a JSON-representation of a task:
     ```
     {
