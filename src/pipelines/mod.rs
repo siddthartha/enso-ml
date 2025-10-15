@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use anyhow::Error;
 use candle_core::Tensor;
 use crate::pipelines::flux::FluxTask;
@@ -28,12 +29,10 @@ impl RenderTask for Task {
 }
 
 impl Task {
-    /// Where to write output in FS (template string)
     pub fn get_output_filename(uuid: String) -> String {
         format!("./media/{}.jpg", uuid.clone())
     }
 
-    // Получить как SD (если это SD)
     pub fn as_sd(&self) -> Option<&StableDiffusionTask> {
         match self {
             Task::StableDiffusion(task) => Some(task),
@@ -48,7 +47,6 @@ impl Task {
         }
     }
 
-    // Mutable версии
     pub fn as_sd_mut(&mut self) -> Option<&mut StableDiffusionTask> {
         match self {
             Task::StableDiffusion(task) => Some(task),
@@ -63,7 +61,6 @@ impl Task {
         }
     }
 
-    // Или unwrap версии если уверены
     pub fn unwrap_sd(&self) -> &StableDiffusionTask {
         match self {
             Task::StableDiffusion(task) => task,
@@ -77,5 +74,9 @@ impl Task {
             _ => panic!("Not a Flux task"),
         }
     }
+}
 
+pub fn get_storage_path() -> PathBuf {
+    PathBuf::from(std::env::var("HF_HOME")
+        .unwrap_or("./data".into()))
 }

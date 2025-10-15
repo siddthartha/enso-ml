@@ -8,7 +8,7 @@ use enso_ml::{
     pipelines::sd::StableDiffusionTask,
     pipelines::sd::StableDiffusionVersion,
     pipelines::flux::FluxTask,
-    pipelines::flux::Model,
+    pipelines::flux::ModelVersion,
     pipelines::Task
 };
 use enso_ml::pipelines::RenderTask;
@@ -78,9 +78,9 @@ pub async fn main() -> anyhow::Result<()>
                 width: Some(width as usize),
                 decode_only: None,
                 model: match version {
-                    1 => Model::Schnell,
-                    2 => Model::Dev,
-                    _ => Model::Schnell,
+                    1 => ModelVersion::Schnell,
+                    2 => ModelVersion::Dev,
+                    _ => ModelVersion::Schnell,
                 },
                 use_dmmv: false,
                 seed: Some(seed.clone() as u64),

@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use anyhow::{Error as E, Result};
 
@@ -8,7 +7,7 @@ use candle_transformers::models::{clip, flux, t5};
 use candle_nn::VarBuilder;
 use hf_hub::api::sync::ApiBuilder;
 use tokenizers::Tokenizer;
-use crate::pipelines::{RenderTask, Task};
+use crate::pipelines::{get_storage_path, RenderTask, Task};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct FluxTask {
@@ -33,7 +32,7 @@ pub struct FluxTask {
     pub decode_only: Option<String>,
 
     /// Model version
-    pub model: Model,
+    pub model: ModelVersion,
 
     /// Use the slower kernels.
     pub use_dmmv: bool,
@@ -43,12 +42,12 @@ pub struct FluxTask {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Copy, clap::ValueEnum, PartialEq, Eq)]
-pub enum Model {
+pub enum ModelVersion {
     Schnell,
     Dev,
 }
 
-impl Model {
+impl ModelVersion {
     fn repo_name(&self) -> &'static str {
         match self {
             Self::Dev => "black-forest-labs/FLUX.1-dev",
@@ -81,10 +80,7 @@ impl RenderTask for FluxTask {
 
         let api = ApiBuilder::new()
             .with_progress(false)
-            .with_cache_dir(
-                PathBuf::from(std::env::var("HF_HOME")
-                    .unwrap_or("./data".into()))
-            )
+            .with_cache_dir(get_storage_path())
             .build()
             .unwrap();
 
@@ -164,8 +160,8 @@ impl RenderTask for FluxTask {
                 println!("CLIP\n{clip_emb}");
                 let img = {
                     let cfg = match model {
-                        Model::Dev => flux::model::Config::dev(),
-                        Model::Schnell => flux::model::Config::schnell(),
+                        ModelVersion::Dev => flux::model::Config::dev(),
+                        ModelVersion::Schnell => flux::model::Config::schnell(),
                     };
                     let img = flux::sampling::get_noise(1, height, width, &device)?.to_dtype(dtype)?;
                     let state = if quantized {
@@ -178,19 +174,19 @@ impl RenderTask for FluxTask {
                         flux::sampling::State::new(&t5_emb, &clip_emb, &img)?
                     };
                     let timesteps = match model {
-                        Model::Dev => {
+                        ModelVersion::Dev => {
                             flux::sampling::get_schedule(50, Some((state.img.dim(1)?, 0.5, 1.15)))
                         }
-                        Model::Schnell => flux::sampling::get_schedule(4, None),
+                        ModelVersion::Schnell => flux::sampling::get_schedule(4, None),
                     };
                     println!("{state:?}");
                     println!("{timesteps:?}");
                     if quantized {
                         let model_file = match model {
-                            Model::Schnell => api
+                            ModelVersion::Schnell => api
                                 .repo(hf_hub::Repo::model("lmz/candle-flux".to_string()))
                                 .get("flux1-schnell.gguf")?,
-                            Model::Dev => todo!(),
+                            ModelVersion::Dev => todo!(),
                         };
                         let vb = candle_transformers::quantized_var_builder::VarBuilder::from_gguf(
                             model_file, &device,
@@ -211,8 +207,8 @@ impl RenderTask for FluxTask {
                             .to_dtype(dtype)?
                     } else {
                         let model_file = match model {
-                            Model::Schnell => bf_repo.get("flux1-schnell.safetensors")?,
-                            Model::Dev => bf_repo.get("flux1-dev.safetensors")?,
+                            ModelVersion::Schnell => bf_repo.get("flux1-schnell.safetensors")?,
+                            ModelVersion::Dev => bf_repo.get("flux1-dev.safetensors")?,
                         };
                         let vb = unsafe {
                             VarBuilder::from_mmaped_safetensors(&[model_file], dtype, &device)?
@@ -232,22 +228,22 @@ impl RenderTask for FluxTask {
                 };
                 flux::sampling::unpack(&img, height, width)?
             }
-            Some(file) => {
-                let mut st = candle_core::safetensors::load(file, &device)?;
+            Some(file_name) => {
+                let mut st = candle_core::safetensors::load(file_name, &device)?;
                 st.remove("img").unwrap().to_dtype(dtype)?
             }
         };
         println!("latent img\n");
 
         let img = {
-            let model_file = bf_repo.get("ae.safetensors")?;
-            let vb = unsafe { VarBuilder::from_mmaped_safetensors(&[model_file], dtype, &device)? };
+            let encoder_model_file = bf_repo.get("ae.safetensors")?;
+            let vb = unsafe { VarBuilder::from_mmaped_safetensors(&[encoder_model_file], dtype, &device)? };
             let cfg = match model {
-                Model::Dev => flux::autoencoder::Config::dev(),
-                Model::Schnell => flux::autoencoder::Config::schnell(),
+                ModelVersion::Dev => flux::autoencoder::Config::dev(),
+                ModelVersion::Schnell => flux::autoencoder::Config::schnell(),
             };
-            let model = flux::autoencoder::AutoEncoder::new(&cfg, vb)?;
-            model.decode(&img)?
+            let encoder = flux::autoencoder::AutoEncoder::new(&cfg, vb)?;
+            encoder.decode(&img)?
         };
         println!("img\n");
         let img = ((img.clamp(-1f32, 1f32)? + 1.0)? * 127.5)?.to_dtype(DType::U8)?;
@@ -256,10 +252,3 @@ impl RenderTask for FluxTask {
         Ok(img)
     }
 }
-
-// fn main() -> Result<()> {
-//     let args = FluxTask::parse();
-//     #[cfg(feature = "cuda")]
-//     candle::quantized::cuda::set_force_dmmv(args.use_dmmv);
-//     run(args)
-// }

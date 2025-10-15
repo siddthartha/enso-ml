@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use anyhow::{Error as E, Result};
 
@@ -8,7 +7,7 @@ use candle_core::utils::cuda_is_available;
 use candle_transformers::models::stable_diffusion;
 use hf_hub::api::sync::ApiBuilder;
 use stable_diffusion::vae::AutoEncoderKL;
-use crate::pipelines::{RenderTask, Task};
+use crate::pipelines::{get_storage_path, RenderTask, Task};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct StableDiffusionTask {
@@ -235,13 +234,7 @@ impl RenderTask for StableDiffusionTask {
 
         for idx in 0..num_samples {
 
-//            let timesteps = scheduler.timesteps();
-
             let timesteps: Vec<_> = scheduler.timesteps().iter().copied().collect();
-//             let timesteps = {
-//                 let ts = scheduler.timesteps();
-//                 ts.to_vec() // или ts.iter().copied().collect()
-//             };
             let latents = match &init_latent_dist {
                 Some(init_latent_dist) => {
                     let latents = (init_latent_dist.sample()? * vae_scale)?.to_device(&device)?;
@@ -451,10 +444,7 @@ impl ModelFile {
                 // };
                 let filename = ApiBuilder::new()
                     .with_progress(false)
-                    .with_cache_dir(
-                        PathBuf::from(std::env::var("HF_HOME")
-                            .unwrap_or("./data".into()))
-                    )
+                    .with_cache_dir(get_storage_path())
                     .build()
                     .unwrap()
                     .model(repo.to_string())
