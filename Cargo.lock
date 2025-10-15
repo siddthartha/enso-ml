@@ -841,6 +841,7 @@ dependencies = [
  "hex",
  "hf-hub",
  "image",
+ "log",
  "pretty_env_logger",
  "redis",
  "regex",
