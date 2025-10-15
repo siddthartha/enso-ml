@@ -13,7 +13,7 @@ use crate::routes::routes;
 #[tokio::main]
 async fn main()
 {
-    if std::env::var_os("RUST_LOG").is_none()
+    if std::env::var("RUST_LOG").is_ok()
     {
         unsafe { std::env::set_var("RUST_LOG", "info"); }
     }
@@ -38,9 +38,8 @@ async fn main()
             info!("📛 Shutdown signal received");
         });
 
-    println!("🚀 Enso ML API server started successfully");
-    info!("📡 Server listening on http://{}",addr);
-    info!("Press Ctrl+C to stop");
+    println!("🚀 Enso ML API server started successfully 📡 listening on http://{}", addr);
+    println!("⏹ press Ctrl+C to stop");
 
     server.run()
         .await;
