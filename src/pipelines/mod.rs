@@ -77,6 +77,6 @@ impl Task {
 }
 
 pub fn get_storage_path() -> PathBuf {
-    PathBuf::from(std::env::var("HF_HOME")
+    PathBuf::from(std::env::var("ENSO_HF_HOME")
         .unwrap_or("./data".into()))
 }

@@ -16,10 +16,17 @@ use enso_ml::pipelines::RenderTask;
 #[tokio::main]
 pub async fn main() -> anyhow::Result<()>
 {
+    if std::env::var("RUST_LOG").is_ok()
+    {
+        unsafe { std::env::set_var("RUST_LOG", "info"); }
+    }
+
+    pretty_env_logger::init();
+
     let client = Client::open(enso_ml::redis_host()).unwrap();
-    let mut connection = client.get_connection()?;
+    let mut read_connection = client.get_connection()?;
+    let mut pubsub_connection = read_connection.as_pubsub();
     let mut write_connection = client.get_connection()?;
-    let mut pubsub_connection = connection.as_pubsub();
 
     pubsub_connection.subscribe(SD_RENDER_QUEUE)?;
     pubsub_connection.subscribe(FLUX_RENDER_QUEUE)?;

@@ -4,6 +4,8 @@ mod routes;
 
 use log::{debug, error, log_enabled, info, Level};
 use std::net::SocketAddr;
+use tokio::signal::unix;
+use tokio::signal::unix::SignalKind;
 
 use crate::models::RenderRequest;
 use crate::models::HealthcheckResponse;
@@ -33,9 +35,8 @@ async fn main()
         .bind(addr)
         .await
         .graceful(async move {
-            let _ = tokio::signal::ctrl_c()
-                .await;
-            info!("📛 Shutdown signal received");
+            let _ = unix::signal(SignalKind::interrupt()).unwrap().recv().await;
+            info!("⛔ Shutdown signal received");
         });
 
     println!("🚀 Enso ML API server started successfully 📡 listening on http://{}", addr);
