@@ -15,6 +15,11 @@ async fn main()
 {
     pretty_env_logger::init();
 
+    if std::env::var_os("RUST_LOG").is_none()
+    {
+        unsafe { std::env::set_var("RUST_LOG", "info"); }
+    }
+
     let routes = routes();
 
     let addr: SocketAddr = "0.0.0.0:80".parse().expect("Incorrect address");
@@ -32,7 +37,6 @@ async fn main()
 
     println!("🚀 Enso ML API server started successfully");
     info!("📡 Server listening on http://{}",addr);
-    info!("🌐 Local access: http://localhost:{}", addr.port());
     info!("Press Ctrl+C to stop");
 
     server.run()
