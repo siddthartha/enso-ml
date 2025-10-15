@@ -13,12 +13,12 @@ use crate::routes::routes;
 #[tokio::main]
 async fn main()
 {
-    pretty_env_logger::init();
-
     if std::env::var_os("RUST_LOG").is_none()
     {
         unsafe { std::env::set_var("RUST_LOG", "info"); }
     }
+
+    pretty_env_logger::init();
 
     let routes = routes();
 
