@@ -22,7 +22,10 @@ async fn main()
 
     let routes = routes();
 
-    let addr: SocketAddr = "0.0.0.0:80".parse().expect("Incorrect address");
+    let listen_host = std::env::var("ENSO_LISTEN_HOST")
+        .unwrap_or_else(|_| "0.0.0.0:80".to_string());
+
+    let addr: SocketAddr = listen_host.parse().expect("Incorrect address");
 
     info!("🔧 Initializing server...");
 
