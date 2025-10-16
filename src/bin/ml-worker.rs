@@ -23,27 +23,8 @@ use enso_ml::{
 
 use enso_ml::pipelines::RenderTask;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    if std::env::var("RUST_LOG").is_ok()
-    {
-        unsafe { std::env::set_var("RUST_LOG", "info"); }
-    }
-
-    pretty_env_logger::init();
-
-    let client = Client::open(enso_ml::redis_host()).unwrap();
-    let mut connection = client.get_multiplexed_async_connection().await?;
-
-    let _ : Result<(), _> = redis::cmd("XGROUP")
-        .arg("CREATE")
-        .arg(QUEUE_STREAM_KEY)
-        .arg(WORKERS_GROUP_NAME)
-        .arg("$")
-        .arg("MKSTREAM")
-        .query_async(&mut connection)
-        .await;
-
+async fn event_loop(mut connection: redis::aio::MultiplexedConnection) -> anyhow::Result<()>
+{
     let worker_name = format!("worker-{}", std::process::id());
     info!("start worker {worker_name}");
 
@@ -71,20 +52,25 @@ async fn main() -> anyhow::Result<()> {
                     .and_then(|v| match v {
                         BulkString(bytes) => String::from_utf8(bytes.clone()).ok(),
                         _ => None,
-                    }).unwrap_or_default()
+                    })
+                    .unwrap_or_default()
                     .to_string();
 
                 let request: RenderRequest = serde_json::from_str(payload.as_str()).unwrap();
 
-                let uuid = request.clone().uuid;
-                let pipeline = request.clone().pipeline;
-                let seed= request.clone().seed;
-                let prompt = request.clone().prompt;
-                let steps = request.clone().steps;
-                let width = request.clone().width;
-                let height = request.clone().height;
-                let intermediary_images = request.clone().intermediates;
-                let version = request.clone().version;
+                let RenderRequest {
+                    uuid,
+                    pipeline,
+                    seed,
+                    prompt,
+                    steps,
+                    width,
+                    height,
+                    intermediates,
+                    version,
+                    ..
+                } = request.clone();
+
 
                 let task = match pipeline.as_str() {
                     SD_RENDER_PIPELINE => Task::StableDiffusion(StableDiffusionTask {
@@ -108,7 +94,7 @@ async fn main() -> anyhow::Result<()> {
                             4 => StableDiffusionVersion::Turbo,
                             _ => StableDiffusionVersion::V1_5,
                         },
-                        intermediary_images,
+                        intermediary_images: intermediates,
                     }),
                     FLUX_RENDER_PIPELINE => Task::Flux(FluxTask {
                         uuid: uuid.clone().to_string(),
@@ -154,4 +140,30 @@ async fn main() -> anyhow::Result<()> {
         }
         ()
     }
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    if std::env::var("RUST_LOG").is_ok()
+    {
+        unsafe { std::env::set_var("RUST_LOG", "info"); }
+    }
+
+    pretty_env_logger::init();
+
+    let client = Client::open(enso_ml::redis_host()).unwrap();
+    let mut connection = client.get_multiplexed_async_connection().await?;
+
+    let _ : Result<(), _> = redis::cmd("XGROUP")
+        .arg("CREATE")
+        .arg(QUEUE_STREAM_KEY)
+        .arg(WORKERS_GROUP_NAME)
+        .arg("$")
+        .arg("MKSTREAM")
+        .query_async(&mut connection)
+        .await;
+
+    let _ = event_loop(connection);
+
+    Ok(())
 }
