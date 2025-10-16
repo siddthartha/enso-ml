@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
 
     let opts = StreamReadOptions::default()
         .group(WORKERS_GROUP_NAME, &worker_name)
-        .block(0) // block eternally, while new message come
+        .block(1000) // block 1 sec
         .count(1);
 
 
@@ -60,7 +60,7 @@ async fn main() -> anyhow::Result<()> {
             .await?;
 
         if reply.keys.is_empty() {
-            sleep(Duration::from_millis(200)).await;
+            continue;
         }
 
         for stream in reply.keys.iter() {
