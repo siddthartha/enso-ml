@@ -5,7 +5,7 @@ use redis::{Client, Commands};
 use std::string::String;
 use candle_core::Tensor;
 use log::info;
-use redis::Value::SimpleString;
+use redis::Value::{BulkString, SimpleString};
 use enso_ml::{
     SD_RENDER_QUEUE,
     FLUX_RENDER_QUEUE,
@@ -66,11 +66,13 @@ async fn main() -> anyhow::Result<()> {
             for msg in stream.ids {
                 let job_id = msg.id;
 
+                info!("Raw Redis value for payload: {:?}", msg.map.get("payload").unwrap());
+
                 let payload : String = msg.map.get("payload")
                     .and_then(|v| match v {
-                        SimpleString(s) => Some(s.as_str()),
+                        redis::Value::BulkString(bytes) => String::from_utf8(bytes.clone()).ok(),
                         _ => None,
-                    }).unwrap_or("")
+                    }).unwrap_or_default()
                     .to_string();
 
                 info!("📥 Job {job_id}: {payload}");
