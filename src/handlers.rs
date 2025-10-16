@@ -4,9 +4,10 @@ use candle_core::utils::cuda_is_available;
 use redis::AsyncCommands;
 use warp::{reject, Rejection, Reply};
 use warp::reply::{json};
-use enso_ml::{generate_uuid_v4, DEFAULT_STEPS, SD_RENDER_QUEUE, STEPS_LIMIT, FLUX_RENDER_QUEUE};
+use enso_ml::{generate_uuid_v4, DEFAULT_STEPS, SD_RENDER_QUEUE, STEPS_LIMIT, FLUX_RENDER_QUEUE, STREAM_KEY};
 use serde_json;
 use crate::{HealthcheckResponse, RenderRequest};
+use anyhow::Result;
 
 type WebResult<T> = Result<T, Rejection>;
 
@@ -80,15 +81,12 @@ pub async fn render_handler(q: HashMap<String, String>) -> WebResult<impl Reply>
             };
 
             let client = redis::Client::open(enso_ml::redis_host()).unwrap();
-            let mut publish_conn = client.get_multiplexed_tokio_connection().await.unwrap();
+            let mut connection = client.get_multiplexed_async_connection().await.unwrap();
 
-            publish_conn.publish::<&str, &str, i8>(
-                match request.pipeline.to_string().as_str() {
-                    "StableDiffusion" => SD_RENDER_QUEUE,
-                    "Flux" => FLUX_RENDER_QUEUE,
-                    _ => SD_RENDER_QUEUE,
-                },
-                serde_json::to_string(request).unwrap().as_str()
+            let _ : String = connection.xadd(
+                STREAM_KEY,
+                "*",
+                &[("payload", serde_json::to_string(request).unwrap().as_str())]
             ).await.unwrap();
 
             Ok(json(request))

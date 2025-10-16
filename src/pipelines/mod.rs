@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use anyhow::Error;
+use anyhow::{Error, Result};
 use candle_core::Tensor;
 use crate::pipelines::flux::FluxTask;
 use crate::pipelines::sd::StableDiffusionTask;

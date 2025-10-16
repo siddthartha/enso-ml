@@ -10,9 +10,11 @@ use uuid::Uuid;
 pub mod models;
 pub mod pipelines;
 
-pub const SD_RENDER_QUEUE: &str = "render:sd";
-pub const FLUX_RENDER_QUEUE: &str = "render:flux";
+pub const SD_RENDER_QUEUE: &str = "StableDiffusion";
+pub const FLUX_RENDER_QUEUE: &str = "Flux";
 pub const TASK_PREFIX: &str = "task";
+pub const STREAM_KEY: &str = "enso:tasks";
+pub const GROUP_NAME: &str = "enso:workers";
 
 pub const GUIDANCE_SCALE: f64 = 7.5;
 pub const DEFAULT_STEPS: u8 = 30;

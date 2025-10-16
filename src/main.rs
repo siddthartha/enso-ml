@@ -40,7 +40,7 @@ async fn main()
         });
 
     println!("🚀 Enso ML API server started successfully 📡 listening on http://{}", addr);
-    println!("⏹ press Ctrl+C to stop");
+    println!("⏹  press Ctrl+C to stop");
 
     server.run()
         .await;
