@@ -44,7 +44,7 @@ async fn main() -> anyhow::Result<()> {
         .await;
 
     let worker_name = format!("worker-{}", std::process::id());
-    println!("Start worker {worker_name}");
+    info!("Start worker {worker_name}");
 
     loop {
         let opts = StreamReadOptions::default()
@@ -57,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
             .await?;
 
         if reply.keys.is_empty() {
-            println!("Waiting job...");
+            info!("Waiting job...");
             sleep(Duration::from_secs(1)).await;
             continue;
         }
@@ -70,7 +70,7 @@ async fn main() -> anyhow::Result<()> {
 
                 let payload : String = msg.map.get("payload")
                     .and_then(|v| match v {
-                        redis::Value::BulkString(bytes) => String::from_utf8(bytes.clone()).ok(),
+                        BulkString(bytes) => String::from_utf8(bytes.clone()).ok(),
                         _ => None,
                     }).unwrap_or_default()
                     .to_string();
@@ -138,7 +138,7 @@ async fn main() -> anyhow::Result<()> {
 
                 let _: Tensor = task.run(seed.clone())?;
 
-                // подтверждаем выполнение
+                // confirm job is completed
                 let _: () = redis::cmd("XACK")
                     .arg(STREAM_KEY)
                     .arg(GROUP_NAME)
@@ -146,7 +146,7 @@ async fn main() -> anyhow::Result<()> {
                     .query_async(&mut connection)
                     .await?;
 
-                println!("✅ Job {job_id} completed");
+                info!("✅ Job {job_id} completed");
             }
         }
         ()
