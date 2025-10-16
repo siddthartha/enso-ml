@@ -1,15 +1,15 @@
+use std::string::String;
+use log::{debug, error, log_enabled, info, Level};
 use redis::AsyncCommands;
 use redis::streams::{StreamReadOptions, StreamReadReply};
 use tokio::time::{sleep, Duration};
-use redis::{Client, Commands};
-use std::string::String;
+use redis::{Client};
+use redis::Value::{BulkString};
 use candle_core::Tensor;
-use log::{debug, error, log_enabled, info, Level};
-use redis::Value::{BulkString, SimpleString};
+
 use enso_ml::{
     SD_RENDER_PIPELINE,
     FLUX_RENDER_PIPELINE,
-    TASK_PREFIX,
     QUEUE_STREAM_KEY,
     WORKERS_GROUP_NAME,
 
@@ -20,6 +20,7 @@ use enso_ml::{
     pipelines::flux::ModelVersion,
     pipelines::Task
 };
+
 use enso_ml::pipelines::RenderTask;
 
 #[tokio::main]

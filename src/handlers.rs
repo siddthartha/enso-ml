@@ -4,7 +4,7 @@ use candle_core::utils::cuda_is_available;
 use redis::AsyncCommands;
 use warp::{reject, Rejection, Reply};
 use warp::reply::{json};
-use enso_ml::{generate_uuid_v4, DEFAULT_STEPS, SD_RENDER_PIPELINE, STEPS_LIMIT, FLUX_RENDER_PIPELINE, QUEUE_STREAM_KEY};
+use enso_ml::{generate_uuid_v4, DEFAULT_STEPS, STEPS_LIMIT, QUEUE_STREAM_KEY};
 use serde_json;
 use crate::{HealthcheckResponse, RenderRequest};
 use anyhow::Result;
