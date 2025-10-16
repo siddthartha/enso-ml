@@ -5,6 +5,9 @@ use crate::pipelines::flux::FluxTask;
 use crate::pipelines::sd::StableDiffusionTask;
 use serde::{Serialize, Deserialize};
 
+pub mod sd;
+pub mod flux;
+
 pub trait RenderTask {
     fn run(&self, seed: i64) -> Result<Tensor, Error>;
 }
@@ -15,9 +18,6 @@ pub enum Task {
     StableDiffusion(sd::StableDiffusionTask),
     Flux(flux::FluxTask),
 }
-
-pub mod sd;
-pub mod flux;
 
 impl RenderTask for Task {
     fn run(&self, seed: i64) -> Result<Tensor, Error> {

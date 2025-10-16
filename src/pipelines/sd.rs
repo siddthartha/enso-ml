@@ -167,7 +167,7 @@ impl RenderTask for StableDiffusionTask {
         };
 
         let mut scheduler = sd_config.build_scheduler(n_steps)?;
-        let device = candle_examples::device(cpu)?;
+        let device = candle_examples::device(false)?;
 
         if cuda_is_available()
         {

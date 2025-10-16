@@ -17,7 +17,7 @@ use enso_ml::{
     pipelines::sd::StableDiffusionTask,
     pipelines::sd::StableDiffusionVersion,
     pipelines::flux::FluxTask,
-    pipelines::flux::ModelVersion,
+    pipelines::flux::FluxVersion,
     pipelines::Task
 };
 
@@ -49,17 +49,18 @@ async fn main() -> anyhow::Result<()> {
 
     let opts = StreamReadOptions::default()
         .group(WORKERS_GROUP_NAME, &worker_name)
-        .block(5000)
+        .block(0) // block eternally, while new message come
         .count(1);
 
-    let reply: StreamReadReply = connection
-        .xread_options(&[QUEUE_STREAM_KEY], &[">"], &opts)
-        .await?;
 
     loop {
-        info!("polling job every 0.3 sec...");
+        info!("polling job...");
+        let reply: StreamReadReply = connection
+            .xread_options(&[QUEUE_STREAM_KEY], &[">"], &opts)
+            .await?;
+
         if reply.keys.is_empty() {
-            sleep(Duration::from_millis(333)).await;
+            sleep(Duration::from_millis(200)).await;
         }
 
         for stream in reply.keys.iter() {
@@ -118,9 +119,9 @@ async fn main() -> anyhow::Result<()> {
                         width: Some(width as usize),
                         decode_only: None,
                         model: match version {
-                            1 => ModelVersion::Schnell,
-                            2 => ModelVersion::Dev,
-                            _ => ModelVersion::Schnell,
+                            1 => FluxVersion::Schnell,
+                            2 => FluxVersion::Dev,
+                            _ => FluxVersion::Schnell,
                         },
                         use_dmmv: false,
                         seed: Some(seed.clone() as u64),
@@ -136,7 +137,7 @@ async fn main() -> anyhow::Result<()> {
                 //     serde_json::to_string(&task).unwrap()
                 // ).unwrap();
 
-                info!("📥 processing job {job_id} / {uuid}: {payload}");
+                info!("📥 processing job {job_id} / {uuid}:\n{payload}");
                 let _: Tensor = task.run(seed.clone())?;
 
 

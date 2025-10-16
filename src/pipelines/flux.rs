@@ -32,7 +32,7 @@ pub struct FluxTask {
     pub decode_only: Option<String>,
 
     /// Model version
-    pub model: ModelVersion,
+    pub model: FluxVersion,
 
     /// Use the slower kernels.
     pub use_dmmv: bool,
@@ -42,12 +42,12 @@ pub struct FluxTask {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Copy, clap::ValueEnum, PartialEq, Eq)]
-pub enum ModelVersion {
+pub enum FluxVersion {
     Schnell,
     Dev,
 }
 
-impl ModelVersion {
+impl FluxVersion {
     fn repo_name(&self) -> &'static str {
         match self {
             Self::Dev => "black-forest-labs/FLUX.1-dev",
@@ -87,7 +87,7 @@ impl RenderTask for FluxTask {
         let bf_repo = api.repo(
             hf_hub::Repo::model(model.repo_name().to_string())
         );
-        let device = candle_examples::device(cpu)?;
+        let device = candle_examples::device(false)?;
 
         if cuda_is_available()
         {
@@ -160,8 +160,8 @@ impl RenderTask for FluxTask {
                 println!("CLIP\n{clip_emb}");
                 let img = {
                     let cfg = match model {
-                        ModelVersion::Dev => flux::model::Config::dev(),
-                        ModelVersion::Schnell => flux::model::Config::schnell(),
+                        FluxVersion::Dev => flux::model::Config::dev(),
+                        FluxVersion::Schnell => flux::model::Config::schnell(),
                     };
                     let img = flux::sampling::get_noise(1, height, width, &device)?.to_dtype(dtype)?;
                     let state = if quantized {
@@ -174,19 +174,19 @@ impl RenderTask for FluxTask {
                         flux::sampling::State::new(&t5_emb, &clip_emb, &img)?
                     };
                     let timesteps = match model {
-                        ModelVersion::Dev => {
+                        FluxVersion::Dev => {
                             flux::sampling::get_schedule(50, Some((state.img.dim(1)?, 0.5, 1.15)))
                         }
-                        ModelVersion::Schnell => flux::sampling::get_schedule(4, None),
+                        FluxVersion::Schnell => flux::sampling::get_schedule(4, None),
                     };
                     println!("{state:?}");
                     println!("{timesteps:?}");
                     if quantized {
                         let model_file = match model {
-                            ModelVersion::Schnell => api
+                            FluxVersion::Schnell => api
                                 .repo(hf_hub::Repo::model("lmz/candle-flux".to_string()))
                                 .get("flux1-schnell.gguf")?,
-                            ModelVersion::Dev => todo!(),
+                            FluxVersion::Dev => todo!(),
                         };
                         let vb = candle_transformers::quantized_var_builder::VarBuilder::from_gguf(
                             model_file, &device,
@@ -207,8 +207,8 @@ impl RenderTask for FluxTask {
                             .to_dtype(dtype)?
                     } else {
                         let model_file = match model {
-                            ModelVersion::Schnell => bf_repo.get("flux1-schnell.safetensors")?,
-                            ModelVersion::Dev => bf_repo.get("flux1-dev.safetensors")?,
+                            FluxVersion::Schnell => bf_repo.get("flux1-schnell.safetensors")?,
+                            FluxVersion::Dev => bf_repo.get("flux1-dev.safetensors")?,
                         };
                         let vb = unsafe {
                             VarBuilder::from_mmaped_safetensors(&[model_file], dtype, &device)?
@@ -239,8 +239,8 @@ impl RenderTask for FluxTask {
             let encoder_model_file = bf_repo.get("ae.safetensors")?;
             let vb = unsafe { VarBuilder::from_mmaped_safetensors(&[encoder_model_file], dtype, &device)? };
             let cfg = match model {
-                ModelVersion::Dev => flux::autoencoder::Config::dev(),
-                ModelVersion::Schnell => flux::autoencoder::Config::schnell(),
+                FluxVersion::Dev => flux::autoencoder::Config::dev(),
+                FluxVersion::Schnell => flux::autoencoder::Config::schnell(),
             };
             let encoder = flux::autoencoder::AutoEncoder::new(&cfg, vb)?;
             encoder.decode(&img)?
