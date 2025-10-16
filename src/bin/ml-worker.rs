@@ -44,27 +44,26 @@ async fn main() -> anyhow::Result<()> {
         .await;
 
     let worker_name = format!("worker-{}", std::process::id());
-    info!("Start worker {worker_name}");
+    info!("start worker {worker_name}");
+
+    let opts = StreamReadOptions::default()
+        .group(WORKERS_GROUP_NAME, &worker_name)
+        .block(5000)
+        .count(1);
+
+    let reply: StreamReadReply = connection
+        .xread_options(&[QUEUE_STREAM_KEY], &[">"], &opts)
+        .await?;
 
     loop {
-        let opts = StreamReadOptions::default()
-            .group(WORKERS_GROUP_NAME, &worker_name)
-            .block(5000)
-            .count(1);
-
-        let reply: StreamReadReply = connection
-            .xread_options(&[QUEUE_STREAM_KEY], &[">"], &opts)
-            .await?;
-
-        info!("Waiting...");
+        info!("polling job every 0.3 sec...");
         if reply.keys.is_empty() {
             sleep(Duration::from_millis(333)).await;
-            continue;
         }
 
-        for stream in reply.keys {
-            for msg in stream.ids {
-                let job_id = msg.id;
+        for stream in reply.keys.iter() {
+            for msg in stream.ids.iter() {
+                let job_id = &msg.id;
 
                 let payload : String = msg.map.get("payload")
                     .and_then(|v| match v {
@@ -72,8 +71,6 @@ async fn main() -> anyhow::Result<()> {
                         _ => None,
                     }).unwrap_or_default()
                     .to_string();
-
-                info!("📥 Job {job_id}: {payload}");
 
                 let request: RenderRequest = serde_json::from_str(payload.as_str()).unwrap();
 
@@ -128,7 +125,7 @@ async fn main() -> anyhow::Result<()> {
                         seed: Some(seed.clone() as u64),
                     }),
                     _ => {
-                        error!("Job with unknown pipeline {pipeline}");
+                        error!("Job with unsupported pipeline {pipeline}");
                         continue;
                     }
                 };
@@ -138,6 +135,7 @@ async fn main() -> anyhow::Result<()> {
                 //     serde_json::to_string(&task).unwrap()
                 // ).unwrap();
 
+                info!("📥 processing job {job_id} / {uuid}: {payload}");
                 let _: Tensor = task.run(seed.clone())?;
 
 
@@ -149,7 +147,7 @@ async fn main() -> anyhow::Result<()> {
                     .query_async(&mut connection)
                     .await?;
 
-                info!("✅ Job {job_id} completed");
+                info!("✅ Job {job_id} / {uuid} completed");
             }
         }
         ()
