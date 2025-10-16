@@ -4,7 +4,7 @@ use candle_core::utils::cuda_is_available;
 use redis::AsyncCommands;
 use warp::{reject, Rejection, Reply};
 use warp::reply::{json};
-use enso_ml::{generate_uuid_v4, DEFAULT_STEPS, SD_RENDER_QUEUE, STEPS_LIMIT, FLUX_RENDER_QUEUE, STREAM_KEY};
+use enso_ml::{generate_uuid_v4, DEFAULT_STEPS, SD_RENDER_PIPELINE, STEPS_LIMIT, FLUX_RENDER_PIPELINE, QUEUE_STREAM_KEY};
 use serde_json;
 use crate::{HealthcheckResponse, RenderRequest};
 use anyhow::Result;
@@ -84,7 +84,7 @@ pub async fn render_handler(q: HashMap<String, String>) -> WebResult<impl Reply>
             let mut connection = client.get_multiplexed_async_connection().await.unwrap();
 
             let _ : String = connection.xadd(
-                STREAM_KEY,
+                QUEUE_STREAM_KEY,
                 "*",
                 &[("payload", serde_json::to_string(request).unwrap().as_str())]
             ).await.unwrap();

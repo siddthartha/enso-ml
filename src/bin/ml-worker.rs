@@ -7,11 +7,11 @@ use candle_core::Tensor;
 use log::{debug, error, log_enabled, info, Level};
 use redis::Value::{BulkString, SimpleString};
 use enso_ml::{
-    SD_RENDER_QUEUE,
-    FLUX_RENDER_QUEUE,
+    SD_RENDER_PIPELINE,
+    FLUX_RENDER_PIPELINE,
     TASK_PREFIX,
-    STREAM_KEY,
-    GROUP_NAME,
+    QUEUE_STREAM_KEY,
+    WORKERS_GROUP_NAME,
 
     models::RenderRequest,
     pipelines::sd::StableDiffusionTask,
@@ -36,10 +36,10 @@ async fn main() -> anyhow::Result<()> {
 
     let _ : Result<(), _> = redis::cmd("XGROUP")
         .arg("CREATE")
-        .arg(STREAM_KEY)
-        .arg(GROUP_NAME)
-        .arg("$")       // начинаем с конца стрима
-        .arg("MKSTREAM") // создаем поток, если его еще нет
+        .arg(QUEUE_STREAM_KEY)
+        .arg(WORKERS_GROUP_NAME)
+        .arg("$")
+        .arg("MKSTREAM")
         .query_async(&mut connection)
         .await;
 
@@ -48,25 +48,23 @@ async fn main() -> anyhow::Result<()> {
 
     loop {
         let opts = StreamReadOptions::default()
-            .group(GROUP_NAME, &worker_name)
+            .group(WORKERS_GROUP_NAME, &worker_name)
             .block(5000)
             .count(1);
 
         let reply: StreamReadReply = connection
-            .xread_options(&[STREAM_KEY], &[">"], &opts)
+            .xread_options(&[QUEUE_STREAM_KEY], &[">"], &opts)
             .await?;
 
+        info!("Waiting...");
         if reply.keys.is_empty() {
-            info!("Waiting job...");
-            sleep(Duration::from_secs(1)).await;
+            sleep(Duration::from_millis(333)).await;
             continue;
         }
 
         for stream in reply.keys {
             for msg in stream.ids {
                 let job_id = msg.id;
-
-                info!("Raw Redis value for payload: {:?}", msg.map.get("payload").unwrap());
 
                 let payload : String = msg.map.get("payload")
                     .and_then(|v| match v {
@@ -80,6 +78,7 @@ async fn main() -> anyhow::Result<()> {
                 let request: RenderRequest = serde_json::from_str(payload.as_str()).unwrap();
 
                 let uuid = request.clone().uuid;
+                let pipeline = request.clone().pipeline;
                 let seed= request.clone().seed;
                 let prompt = request.clone().prompt;
                 let steps = request.clone().steps;
@@ -88,8 +87,8 @@ async fn main() -> anyhow::Result<()> {
                 let intermediary_images = request.clone().intermediates;
                 let version = request.clone().version;
 
-                let task = match request.clone().pipeline.as_str() {
-                    SD_RENDER_QUEUE => Task::StableDiffusion(StableDiffusionTask {
+                let task = match pipeline.as_str() {
+                    SD_RENDER_PIPELINE => Task::StableDiffusion(StableDiffusionTask {
                         uuid: uuid.clone().to_string(),
                         prompt: prompt.clone(),
                         height: Some(height as usize),
@@ -112,7 +111,7 @@ async fn main() -> anyhow::Result<()> {
                         },
                         intermediary_images,
                     }),
-                    FLUX_RENDER_QUEUE => Task::Flux(FluxTask {
+                    FLUX_RENDER_PIPELINE => Task::Flux(FluxTask {
                         uuid: uuid.clone().to_string(),
                         prompt: prompt.clone(),
                         cpu: false,
@@ -128,7 +127,10 @@ async fn main() -> anyhow::Result<()> {
                         use_dmmv: false,
                         seed: Some(seed.clone() as u64),
                     }),
-                    _ => panic!("Unknown queue")
+                    _ => {
+                        error!("Job with unknown pipeline {pipeline}");
+                        continue;
+                    }
                 };
 
                 // write_connection.set::<String, String, String>(
@@ -138,10 +140,11 @@ async fn main() -> anyhow::Result<()> {
 
                 let _: Tensor = task.run(seed.clone())?;
 
+
                 // confirm job is completed
                 let _: () = redis::cmd("XACK")
-                    .arg(STREAM_KEY)
-                    .arg(GROUP_NAME)
+                    .arg(QUEUE_STREAM_KEY)
+                    .arg(WORKERS_GROUP_NAME)
                     .arg(&job_id)
                     .query_async(&mut connection)
                     .await?;

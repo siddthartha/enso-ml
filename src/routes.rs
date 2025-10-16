@@ -6,12 +6,11 @@ use crate::{health_checker_handler, render_handler};
 pub fn routes() -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     let log = warp::log::custom(|info| {
         info!(
-            "{} {} {} {} in {:?}",
-            info.remote_addr().map(|addr| addr.to_string()).unwrap_or_else(|| "unknown".to_string()),
+            "→ {} {} {} {}",
+            info.host().unwrap_or(&""),
+            info.status(),
             info.method(),
-            info.path(),
-            info.status().as_u16(),
-            info.elapsed()
+            info.path()
         );
     });
 
