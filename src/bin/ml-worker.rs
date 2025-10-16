@@ -4,7 +4,7 @@ use tokio::time::{sleep, Duration};
 use redis::{Client, Commands};
 use std::string::String;
 use candle_core::Tensor;
-use log::info;
+use log::{debug, error, log_enabled, info, Level};
 use redis::Value::{BulkString, SimpleString};
 use enso_ml::{
     SD_RENDER_QUEUE,
