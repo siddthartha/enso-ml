@@ -54,22 +54,37 @@ impl Worker {
             .await
     }
 
-    pub async fn event_loop(&mut self) -> anyhow::Result<()>
+    pub async fn pull_job(&mut self) -> StreamReadReply
     {
-        let worker_name = format!("worker-{}", std::process::id());
-        info!("start worker {worker_name}");
-
+        let worker_name = self.get_worker_name();
         let opts = StreamReadOptions::default()
             .group(WORKERS_GROUP_NAME, &worker_name)
             .block(1000) // block 1 sec
             .count(1);
 
+        let reply: StreamReadReply = self.connection
+            .xread_options(&[QUEUE_STREAM_KEY], &[">"], &opts)
+            .await
+            .expect("queue read error");
+
+        reply
+    }
+
+    pub fn get_worker_name(&self) -> String
+    {
+        format!("worker-{}", std::process::id())
+    }
+
+    pub async fn event_loop(&mut self) -> anyhow::Result<()>
+    {
+        let worker_name = self.get_worker_name();
+        info!("start worker {}", worker_name);
 
         loop {
             info!("polling job...");
-            let reply: StreamReadReply = self.connection
-                .xread_options(&[QUEUE_STREAM_KEY], &[">"], &opts)
-                .await?;
+            let reply = self
+                .pull_job()
+                .await;
 
             if reply.keys.is_empty() {
                 continue;
@@ -186,7 +201,9 @@ async fn main() -> anyhow::Result<()> {
 
     let mut worker = Worker::new().await;
 
-    let _ : Result<(), _> = worker.create_group().await;
+    let _ : Result<(), _> = worker
+        .create_group()
+        .await;
 
     let _ = worker
         .event_loop();
