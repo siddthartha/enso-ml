@@ -85,7 +85,7 @@ pub async fn render_handler(q: HashMap<String, String>) -> WebResult<impl Reply>
 
             let _ : String = connection.xadd(
                 QUEUE_STREAM_KEY,
-                "*",
+                &request.uuid,
                 &[("payload", serde_json::to_string(request).unwrap().as_str())]
             ).await.unwrap();
 

@@ -42,7 +42,7 @@ impl Worker {
         }
     }
 
-    pub async fn create_group(&mut self) -> Result<(), RedisError>
+    pub async fn init_redis_group(&mut self) -> Result<(), RedisError>
     {
         redis::cmd("XGROUP")
             .arg("CREATE")
@@ -73,6 +73,16 @@ impl Worker {
     pub fn get_worker_name(&self) -> String
     {
         format!("worker-{}", std::process::id())
+    }
+
+    pub async fn commit_job(&mut self, job_id: String) -> Result<(), RedisError>
+    {
+        redis::cmd("XACK")
+            .arg(QUEUE_STREAM_KEY)
+            .arg(WORKERS_GROUP_NAME)
+            .arg(&job_id)
+            .query_async(&mut self.connection)
+            .await
     }
 
     pub async fn event_loop(&mut self) -> anyhow::Result<()>
@@ -170,15 +180,15 @@ impl Worker {
                     // ).unwrap();
 
                     info!("📥 processing job {job_id} / {uuid}:\n{payload}");
-                    let _: Tensor = task.run(seed.clone())?;
+                    let _result_image: Tensor = match task.run(seed.clone()) {
+                        Ok(tensor) => tensor,
+                        Err(e) => {
+                            error!("Job {job_id} / {uuid} failed: {error}", job_id = job_id, uuid = uuid, error = e);
+                            continue;
+                        }
+                    };
 
-
-                    // confirm job is completed
-                    let _: () = redis::cmd("XACK")
-                        .arg(QUEUE_STREAM_KEY)
-                        .arg(WORKERS_GROUP_NAME)
-                        .arg(&job_id)
-                        .query_async(&mut self.connection)
+                    self.commit_job(job_id.clone())
                         .await?;
 
                     info!("✅ Job {job_id} / {uuid} completed");
@@ -199,10 +209,11 @@ async fn main() -> anyhow::Result<()> {
 
     pretty_env_logger::init();
 
-    let mut worker = Worker::new().await;
+    let mut worker = Worker::new()
+        .await;
 
-    let _ : Result<(), _> = worker
-        .create_group()
+    let _ = worker
+        .init_redis_group()
         .await;
 
     let _ = worker

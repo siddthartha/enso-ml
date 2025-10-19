@@ -462,7 +462,7 @@ fn save_image(
     vae: &AutoEncoderKL,
     latents: &Tensor,
     vae_scale: f64,
-    bsize: usize,
+    _bsize: usize,
     idx: usize,
     final_image: &str,
     num_samples: usize,
@@ -472,16 +472,14 @@ fn save_image(
     let images = vae.decode(&(latents / vae_scale)?)?;
     let images = ((images / 2.)? + 0.5)?.to_device(&Device::Cpu)?;
     let images = (images.clamp(0f32, 1.)? * 255.)?.to_dtype(DType::U8)?;
-    for batch in 0..bsize {
-        let image = images.i(batch)?;
-        let image_filename = StableDiffusionTask::output_filename(
-            final_image,
-            (bsize * idx) + batch + 1,
-            batch + num_samples,
-            timestep_ids,
-        );
-        candle_examples::save_image(&image, image_filename)?;
-    }
+    let image = images.i(0)?;
+    let image_filename = StableDiffusionTask::output_filename(
+        final_image,
+        idx + 1,
+        num_samples,
+        timestep_ids,
+    );
+    candle_examples::save_image(&image, image_filename)?;
     Ok(())
 }
 
