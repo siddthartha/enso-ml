@@ -1,4 +1,5 @@
 use std::string::String;
+use candle_core::safetensors::save;
 use log::{debug, error, log_enabled, info, Level};
 use redis::{AsyncCommands, RedisError};
 use redis::streams::{StreamReadOptions, StreamReadReply};
@@ -23,6 +24,7 @@ use enso_ml::{
 };
 
 use enso_ml::pipelines::RenderTask;
+use enso_ml::storage;
 
 
 struct Worker {
@@ -180,10 +182,24 @@ impl Worker {
                     // ).unwrap();
 
                     info!("📥 processing job {job_id} / {uuid}:\n{payload}");
-                    let _result_image: Tensor = match task.run(seed.clone()) {
-                        Ok(tensor) => tensor,
+                    let result_image: Tensor = match task.run(seed.clone()) {
+                        Ok(tensor) => {
+                            info!("✅ Job {job_id} / {uuid} completed");
+                            tensor
+                        },
                         Err(e) => {
                             error!("Job {job_id} / {uuid} failed: {error}", job_id = job_id, uuid = uuid, error = e);
+                            continue;
+                        }
+                    };
+
+                    match storage::save_to_s3_safe(&result_image, uuid.as_str()).await {
+                        Ok(tensor) => {
+                            info!("✅ Job {job_id} saved", job_id = job_id);
+                            tensor
+                        },
+                        Err(e) => {
+                            error!("Job {job_id} / {uuid} failed to save: {error}", job_id = job_id, uuid = uuid, error = e);
                             continue;
                         }
                     };
@@ -191,7 +207,6 @@ impl Worker {
                     self.commit_job(job_id.clone())
                         .await?;
 
-                    info!("✅ Job {job_id} / {uuid} completed");
                 }
             }
             ()
@@ -217,7 +232,8 @@ async fn main() -> anyhow::Result<()> {
         .await;
 
     let _ = worker
-        .event_loop();
+        .event_loop()
+        .await?;
 
     Ok(())
 }

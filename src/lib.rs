@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 pub mod models;
 pub mod pipelines;
+pub mod storage;
 
 pub const SD_RENDER_PIPELINE: &str = "StableDiffusion";
 pub const FLUX_RENDER_PIPELINE: &str = "Flux";
