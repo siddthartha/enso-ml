@@ -36,7 +36,7 @@ impl Worker {
     pub async fn new() -> Self
     {
         let client = Client::open(enso_ml::redis_host()).unwrap();
-        let connection = client.get_multiplexed_async_connection().await.unwrap();
+        let connection = client.get_multiplexed_tokio_connection().await.unwrap();
 
         Self {
             client,
