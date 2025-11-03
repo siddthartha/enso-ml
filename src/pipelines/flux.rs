@@ -1,12 +1,13 @@
 use serde::{Deserialize, Serialize};
 use anyhow::{Error as E, Result};
 
-use candle_core::{Module, IndexOp, Tensor, DType};
+use candle_core::{Module, IndexOp, Tensor, DType, Device};
 use candle_core::utils::cuda_is_available;
 use candle_transformers::models::{clip, flux, t5};
+use candle_transformers::models::flux::autoencoder::AutoEncoder;
 use candle_nn::VarBuilder;
-use hf_hub::api::sync::ApiBuilder;
 use tokenizers::Tokenizer;
+use hf_hub::api::sync::ApiBuilder;
 use crate::pipelines::{get_storage_path, RenderTask, Task};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -53,6 +54,14 @@ impl FluxVersion {
             Self::Dev => "black-forest-labs/FLUX.1-dev",
             Self::Schnell => "black-forest-labs/FLUX.1-schnell",
         }
+    }
+}
+
+impl FluxTask {
+    fn decode_latent(&self, autoencoder: &AutoEncoder, latents: &Tensor, device: &Device) -> Result<Tensor> {
+        let images = autoencoder.decode(latents)?.to_device(&device)?;
+        let images = ((images.clamp(-1f32, 1f32)? + 1.0)? * 127.5)?.to_dtype(DType::U8)?;
+        Ok(images)
     }
 }
 
@@ -242,13 +251,16 @@ impl RenderTask for FluxTask {
                 FluxVersion::Dev => flux::autoencoder::Config::dev(),
                 FluxVersion::Schnell => flux::autoencoder::Config::schnell(),
             };
-            let encoder = flux::autoencoder::AutoEncoder::new(&cfg, vb)?;
-            encoder.decode(&img)?
+            let encoder = AutoEncoder::new(&cfg, vb)?;
+            
+            self.decode_latent(&encoder, &img, &device)?
         };
+
         println!("img\n");
-        let img = ((img.clamp(-1f32, 1f32)? + 1.0)? * 127.5)?.to_dtype(DType::U8)?;
+
         let filename = Task::get_output_filename(uuid.clone());
         candle_examples::save_image(&img.i(0)?, filename)?;
+
         Ok(img)
     }
 }

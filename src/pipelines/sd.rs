@@ -3,8 +3,8 @@ use anyhow::{Error as E, Result};
 
 use tokenizers::Tokenizer;
 use candle_core::{DType, Device, IndexOp, Module, Tensor, D};
-use candle_core::utils::cuda_is_available;
 use candle_transformers::models::stable_diffusion;
+use candle_core::utils::cuda_is_available;
 use hf_hub::api::sync::ApiBuilder;
 use stable_diffusion::vae::AutoEncoderKL;
 use crate::pipelines::{get_storage_path, RenderTask, Task};
@@ -76,6 +76,19 @@ enum ModelFile {
 
 impl StableDiffusionTask {
 
+    pub fn get_device(cpu: bool) -> Result<Device> {
+        let device = match cpu {
+            true => Ok(Device::Cpu),
+            _ => match cuda_is_available() {
+                true => Ok(Device::new_cuda(0)?),
+                _ => Ok(Device::Cpu),
+            }
+        };
+
+        println!("Using device: {:?}", device);
+        device
+    }
+
     pub fn output_filename(
         basename: &str,
         sample_idx: usize,
@@ -102,6 +115,57 @@ impl StableDiffusionTask {
             },
         }
     }
+
+    pub fn get_vae_scale(&self) -> f64 {
+        match self.sd_version {
+            StableDiffusionVersion::V1_5
+            | StableDiffusionVersion::V2_1
+            | StableDiffusionVersion::Xl => 0.18215,
+            StableDiffusionVersion::Turbo => 0.13025,
+        }
+    }
+
+    /// Decode a batch of latents into images
+    pub fn decode_latent(&self, vae: &AutoEncoderKL, latents: &Tensor, device: &Device) -> Result<Tensor> {
+        let vae_scale = self.get_vae_scale();
+        
+        let images = vae.decode(&(latents / vae_scale)?)?;
+        let images = ((images / 2.)? + 0.5)?.to_device(&device)?;
+        let images = (images.clamp(0f32, 1.)? * 255.)?.to_dtype(DType::U8)?;
+        Ok(images)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn save_image(
+        &self,
+        vae: &AutoEncoderKL,
+        latents: &Tensor,
+        vae_scale: f64,
+        _bsize: usize,
+        idx: usize,
+        final_image: &str,
+        num_samples: usize,
+        timestep_ids: Option<usize>,
+    ) -> Result<()>
+    {
+        let images = self.decode_latent(
+            vae,
+            latents,
+            &Self::get_device(false)?
+        )?;
+
+        let image = images.i(0)?;
+
+        let image_filename = StableDiffusionTask::output_filename(
+            final_image,
+            idx + 1,
+            num_samples,
+            timestep_ids,
+        );
+        candle_examples::save_image(&image, image_filename)?;
+        Ok(())
+    }
+
 }
 
 impl RenderTask for StableDiffusionTask {
@@ -223,12 +287,7 @@ impl RenderTask for StableDiffusionTask {
             0
         };
 
-        let vae_scale = match sd_version {
-            StableDiffusionVersion::V1_5
-            | StableDiffusionVersion::V2_1
-            | StableDiffusionVersion::Xl => 0.18215,
-            StableDiffusionVersion::Turbo => 0.13025,
-        };
+        let vae_scale = self.get_vae_scale();
 
         let mut final_latents = Tensor::randn(0f32, 1., (2, 3), &device)?;
 
@@ -291,7 +350,7 @@ impl RenderTask for StableDiffusionTask {
                 println!("step {}/{n_steps} done, {:.2}s", timestep_index + 1, dt);
 
                 if self.intermediary_images {
-                    save_image(
+                    self.save_image(
                         &vae,
                         &latents,
                         vae_scale,
@@ -309,7 +368,7 @@ impl RenderTask for StableDiffusionTask {
                 idx + 1,
                 num_samples
             );
-            save_image(
+            self.save_image(
                 &vae,
                 &latents,
                 vae_scale,
@@ -323,7 +382,9 @@ impl RenderTask for StableDiffusionTask {
             final_latents = latents.clone();
         }
 
-        Ok(final_latents)
+        // Decode the final latents to get the final RGB image
+        let final_images = self.decode_latent(&vae, &final_latents, &device)?;
+        Ok(final_images.i(0)?) // Extract the first (and typically only) image from the batch
     }
 }
 
@@ -455,32 +516,6 @@ impl ModelFile {
             }
         }
     }
-}
-
-#[allow(clippy::too_many_arguments)]
-fn save_image(
-    vae: &AutoEncoderKL,
-    latents: &Tensor,
-    vae_scale: f64,
-    _bsize: usize,
-    idx: usize,
-    final_image: &str,
-    num_samples: usize,
-    timestep_ids: Option<usize>,
-) -> Result<()>
-{
-    let images = vae.decode(&(latents / vae_scale)?)?;
-    let images = ((images / 2.)? + 0.5)?.to_device(&Device::Cpu)?;
-    let images = (images.clamp(0f32, 1.)? * 255.)?.to_dtype(DType::U8)?;
-    let image = images.i(0)?;
-    let image_filename = StableDiffusionTask::output_filename(
-        final_image,
-        idx + 1,
-        num_samples,
-        timestep_ids,
-    );
-    candle_examples::save_image(&image, image_filename)?;
-    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
